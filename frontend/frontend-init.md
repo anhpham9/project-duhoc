@@ -68,6 +68,13 @@ http://localhost:3000
 
 ### 🧱 Tạo config
 
+Cài @nuxt/devtools nếu chưa có:
+
+
+```BASH
+npm install -D @nuxt/devtools
+```
+
 📁 nuxt.config.ts
 
 ```

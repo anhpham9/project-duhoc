@@ -8,16 +8,16 @@ import authRoutes from "./modules/auth/auth.routes.js";
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+// Origin động: lấy từ biến môi trường FRONTEND_ORIGIN, fallback localhost:3000
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+app.use(cors({
+  origin: FRONTEND_ORIGIN,
+  credentials: true
+}));
 app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
-
-app.use(cors({
-  origin: "http://localhost:3000",
-  credentials: true
-}));
 
 app.use("/api/auth", authRoutes);
 
