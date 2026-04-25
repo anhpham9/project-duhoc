@@ -1,21 +1,40 @@
 import { verifyToken, generateAccessToken, generateRefreshToken } from "../../utils/jwt.js";
 import { findRefreshToken, saveRefreshToken } from "./auth.service.js";
 import bcrypt from "bcrypt";
-
-const fakeUser = {
-    id: 1,
-    email: "test@gmail.com",
-    password: bcrypt.hashSync("123456", 10),
-};
+import User from "../users/user.model.js";
+import UserSession from "./userSession.model.js";
+import crypto from "crypto";
 
 export const login = async (req, res) => {
-    const user = { id: 1 }; // giả lập
+    const { username, password } = req.body;
+    if (!username || !password) {
+        return res.status(400).json({ message: "Missing username or password" });
+    }
+    const user = await User.findOne({ where: { username } });
+    if (!user) {
+        return res.status(401).json({ message: "Invalid username or password" });
+    }
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+        return res.status(401).json({ message: "Invalid username or password" });
+    }
+
+    // Cập nhật last_login
+    user.last_login = new Date();
+    await user.save();
 
     const accessToken = generateAccessToken({ id: user.id });
     const refreshToken = generateRefreshToken({ id: user.id });
 
-    // lưu DB
-    await saveRefreshToken(user.id, refreshToken);
+    // Lưu user session (hash refreshToken)
+    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+    await UserSession.create({
+        user_id: user.id,
+        refresh_token_hash: refreshTokenHash,
+        ip_address: req.ip,
+        user_agent: req.headers["user-agent"] || null,
+        expired_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
+    });
 
     res.cookie("accessToken", accessToken, {
         httpOnly: true,
