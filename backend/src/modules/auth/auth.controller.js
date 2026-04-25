@@ -79,7 +79,25 @@ export const refresh = async (req, res) => {
     }
 };
 
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
+    try {
+        const refreshToken = req.cookies.refreshToken;
+        if (refreshToken) {
+            // Xóa session khỏi DB
+            const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
+            // Nếu có user_id từ accessToken thì xóa đúng session, nếu không thì xóa theo hash
+            let userId = null;
+            try {
+                const decoded = req.cookies.accessToken ? verifyToken(req.cookies.accessToken, process.env.JWT_ACCESS_SECRET) : null;
+                userId = decoded?.id;
+            } catch {}
+            const where = userId ? { user_id: userId, refresh_token_hash: refreshTokenHash } : { refresh_token_hash: refreshTokenHash };
+            await UserSession.destroy({ where });
+        }
+    } catch (err) {
+        // Không throw lỗi ra ngoài, chỉ log nếu cần
+        // console.error("Logout session cleanup error", err);
+    }
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
     res.json({ message: "Logged out" });

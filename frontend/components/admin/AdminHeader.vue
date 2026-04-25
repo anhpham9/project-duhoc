@@ -4,6 +4,7 @@
         <div v-if="user">
             <span>Xin chào: <b>{{ user.name }}</b></span>
             <span style="margin-left:16px;">Lần cuối đăng nhập: <b>{{ lastLoginText }}</b></span>
+            <button @click="onLogout">Đăng xuất</button>
         </div>
     </header>
 </template>
@@ -25,4 +26,12 @@ onMounted(async () => {
         user.value = null;
     }
 });
+const onLogout = async () => {
+    try {
+        await $fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        window.location.reload();
+    } catch (e) {
+        alert('Đăng xuất thất bại!');
+    }
+};
 </script>
