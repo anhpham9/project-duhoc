@@ -7,5 +7,6 @@
 definePageMeta({
     layout: "admin",
     middleware: 'auth',
+    ssr: false,
 });
 </script>

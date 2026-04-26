@@ -13,7 +13,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-definePageMeta({ layout: "empty", middleware: 'guest' });
+definePageMeta({ layout: "empty", middleware: 'guest', ssr: false });
 
 const username = ref('');
 const password = ref('');

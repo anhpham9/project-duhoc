@@ -36,4 +36,6 @@ Permission.belongsToMany(Role, {
     sourceKey: "code",
 });
 
-// (Không cần associations cho ActivityLog, chỉ import để sync model)
+// User - ActivityLog (1-n)
+ActivityLog.belongsTo(User, { foreignKey: "user_id" });
+User.hasMany(ActivityLog, { foreignKey: "user_id" });

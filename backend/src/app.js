@@ -4,7 +4,10 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
 
+import "./db/associations.js";
+
 import authRoutes from "./modules/auth/auth.routes.js";
+import activityLogRoutes from "./modules/admin/activityLog.routes.js";
 
 const app = express();
 
@@ -20,5 +23,6 @@ app.use(cookieParser());
 app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/activity-logs", activityLogRoutes);
 
 export default app;

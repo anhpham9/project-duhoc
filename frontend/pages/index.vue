@@ -6,5 +6,6 @@
 <script setup>
 definePageMeta({
     layout: "default",
+    ssr: false,
 });
 </script>

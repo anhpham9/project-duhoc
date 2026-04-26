@@ -30,6 +30,7 @@ const onLogout = async () => {
     try {
         await $fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         window.location.reload();
+        return navigateTo('/login');
     } catch (e) {
         alert('Đăng xuất thất bại!');
     }
