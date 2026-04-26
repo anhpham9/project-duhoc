@@ -5,35 +5,29 @@ import UserRole from "../modules/userRoles/userRole.model.js";
 import RolePermission from "../modules/rolePermissions/rolePermission.model.js";
 import ActivityLog from "../modules/auth/activityLog.model.js";
 
-// User ↔ Role
+
+// User ↔ Role (qua UserRole)
 User.belongsToMany(Role, {
     through: UserRole,
     foreignKey: "user_id",
-    otherKey: "role_code",
-    targetKey: "code",
+    otherKey: "role_id"
 });
-
 Role.belongsToMany(User, {
     through: UserRole,
-    foreignKey: "role_code",
-    otherKey: "user_id",
-    sourceKey: "code",
+    foreignKey: "role_id",
+    otherKey: "user_id"
 });
 
-// Role ↔ Permission
+// Role ↔ Permission (qua RolePermission)
 Role.belongsToMany(Permission, {
     through: RolePermission,
-    foreignKey: "role_code",
-    otherKey: "permission_code",
-    sourceKey: "code",
-    targetKey: "code",
+    foreignKey: "role_id",
+    otherKey: "permission_id"
 });
-
 Permission.belongsToMany(Role, {
     through: RolePermission,
-    foreignKey: "permission_code",
-    otherKey: "role_code",
-    sourceKey: "code",
+    foreignKey: "permission_id",
+    otherKey: "role_id"
 });
 
 // User - ActivityLog (1-n)

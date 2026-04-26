@@ -1,3 +1,4 @@
+// định nghĩa model Permission, tương tác trực tiếp với DB, không chứa logic nghiệp vụ
 import { DataTypes } from "sequelize";
 import sequelize from "../../db/index.js";
 

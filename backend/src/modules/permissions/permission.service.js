@@ -1,6 +1,8 @@
+// xử lý logic nghiệp vụ liên quan đến permissions, gọi repository để tương tác DB, trả về dữ liệu cho controller
 import User from "../modules/users/user.model.js";
 import Role from "../modules/roles/role.model.js";
 import Permission from "../modules/permissions/permission.model.js";
+import { getUserWithRolesAndPermissions } from "../users/user.repository.js";
 
 const permissionCache = new Map();
 
@@ -8,19 +10,8 @@ export const getUserPermissions = async (userId) => {
     if (permissionCache.has(userId)) {
         return permissionCache.get(userId);
     }
-
-    const user = await User.findByPk(userId, {
-        include: {
-            model: Role,
-            include: {
-                model: Permission,
-                attributes: ["code"],
-                through: { attributes: [] },
-            },
-            attributes: ["id"],
-            through: { attributes: [] },
-        },
-    });
+    
+    const user = await getUserWithRolesAndPermissions(userId);
 
     if (!user) return [];
 

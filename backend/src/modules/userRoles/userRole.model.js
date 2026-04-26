@@ -8,8 +8,8 @@ const UserRole = sequelize.define(
             type: DataTypes.BIGINT,
             primaryKey: true,
         },
-        role_code: {
-            type: DataTypes.STRING,
+        role_id: {
+            type: DataTypes.INTEGER,
             primaryKey: true,
         },
     },

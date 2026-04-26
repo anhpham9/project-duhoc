@@ -8,6 +8,8 @@ import "./db/associations.js";
 
 import authRoutes from "./modules/auth/auth.routes.js";
 import activityLogRoutes from "./modules/admin/activityLog.routes.js";
+import permissionRoutes from "./modules/permissions/permission.routes.js";
+import roleRoutes from "./modules/roles/role.routes.js";
 
 const app = express();
 
@@ -24,5 +26,7 @@ app.use(morgan("dev"));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/permissions", permissionRoutes);
+app.use("/api/roles", roleRoutes);
 
 export default app;

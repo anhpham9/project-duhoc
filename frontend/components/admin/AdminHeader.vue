@@ -6,6 +6,9 @@
             <span style="margin-left:16px;">Lần cuối đăng nhập: <b>{{ lastLoginText }}</b></span>
             <button @click="onLogout">Đăng xuất</button>
         </div>
+        <div v-else>
+            <a href="/login">Đăng nhập</a>
+        </div>
     </header>
 </template>
 <script setup>
@@ -21,7 +24,7 @@ const lastLoginText = computed(() => {
 onMounted(async () => {
     try {
         const res = await $fetch('/api/auth/me', { credentials: 'include' });
-        user.value = res.user;
+        user.value = res;
     } catch (e) {
         user.value = null;
     }

@@ -4,12 +4,12 @@ import sequelize from "../../db/index.js";
 const RolePermission = sequelize.define(
     "RolePermission",
     {
-        role_code: {
-            type: DataTypes.STRING,
+        role_id: {
+            type: DataTypes.INTEGER,
             primaryKey: true,
         },
-        permission_code: {
-            type: DataTypes.STRING,
+        permission_id: {
+            type: DataTypes.INTEGER,
             primaryKey: true,
         },
     },
