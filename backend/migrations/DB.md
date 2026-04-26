@@ -500,3 +500,83 @@ CREATE TABLE activity_logs (
 );
 CREATE INDEX idx_activity_logs_user ON activity_logs(user_id);
 ```
+
+## Ý nghĩa các bảng trong CSDL
+
+### 1. roles
+Chứa các vai trò (role) của hệ thống, ví dụ: admin, user, editor. Mỗi vai trò có mã code và mô tả.
+
+### 2. permissions
+Chứa các quyền (permission) cụ thể, ví dụ: xem, sửa, xóa, tạo dữ liệu.
+
+### 3. role_permissions
+Bảng liên kết nhiều-nhiều giữa roles và permissions, xác định vai trò nào có quyền gì.
+
+### 4. users
+Chứa thông tin người dùng: tên, username, email, số điện thoại, mật khẩu, trạng thái hoạt động, thời gian tạo/cập nhật, v.v.
+
+### 5. user_roles
+Bảng liên kết nhiều-nhiều giữa users và roles, xác định người dùng thuộc vai trò nào.
+
+### 6. categories
+Chứa danh mục tin tức hoặc nội dung, gồm tên và slug.
+
+### 7. news
+Chứa bài viết/tin tức: tiêu đề, nội dung, trạng thái, tác giả, danh mục, ngày xuất bản, v.v.
+
+### 8. news_views
+Lưu lượt xem từng bài viết, gồm id bài viết, IP, user agent, thời gian xem.
+
+### 9. news_view_stats
+Thống kê tổng số lượt xem cho từng bài viết.
+
+### 10. regions
+Vùng/miền địa lý cho trường học, gồm tên và slug.
+
+### 11. school_types
+Các loại trường học (ví dụ: nhật ngữ, senmon có nhật ngữ), gồm tên và slug.
+
+### 12. schools
+Thông tin trường học: tên, slug, vị trí, học phí, loại trường, vùng, trạng thái, logo, đánh giá, v.v.
+
+### 13. school_reviews
+Đánh giá của học sinh về trường: tên học sinh, quốc tịch, khóa học, điểm đánh giá, nội dung, v.v.
+
+### 14. faqs
+Câu hỏi thường gặp, có thể liên kết với trường học.
+
+### 15. contacts
+Thông tin liên hệ từ khách hàng: tên, email, số điện thoại, nội dung, trạng thái, phương thức liên hệ, người phụ trách, v.v.
+
+### 16. contact_notes
+Ghi chú của nhân viên về từng liên hệ.
+
+### 17. static_pages
+Các trang tĩnh (giới thiệu, điều khoản, v.v.), gồm tiêu đề, slug, trạng thái, loại trang.
+
+### 18. page_contents
+Nội dung chi tiết của từng trang tĩnh.
+
+### 19. settings
+Cấu hình hệ thống dạng key-value.
+
+### 20. notifications
+Thông báo gửi cho user hoặc role, gồm loại thông báo, tiêu đề, nội dung, trạng thái đã đọc, v.v.
+
+### 21. notification_settings
+Cài đặt nhận thông báo của từng user hoặc role cho từng loại thông báo.
+
+### 22. audit_logs
+Lưu lại các hành động quan trọng (audit) của user: hành động gì, đối tượng nào, dữ liệu liên quan, IP, user agent, v.v.
+
+### 23. password_reset_tokens
+Token dùng để reset mật khẩu, liên kết với user, có thời hạn và trạng thái đã dùng/chưa dùng.
+
+### 24. user_sessions
+Lưu thông tin phiên đăng nhập của user, gồm refresh token, IP, user agent, thời gian hết hạn.
+
+### 25. files
+Lưu thông tin file upload: user upload, public id, url, loại file, kích thước, thư mục, tag, v.v.
+
+### 26. activity_logs
+Lưu lại các hoạt động của user (giống audit_logs nhưng có thể dùng cho mục đích tracking thông thường hơn).

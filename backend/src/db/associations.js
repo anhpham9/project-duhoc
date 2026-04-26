@@ -3,6 +3,7 @@ import Role from "../modules/roles/role.model.js";
 import Permission from "../modules/permissions/permission.model.js";
 import UserRole from "../modules/userRoles/userRole.model.js";
 import RolePermission from "../modules/rolePermissions/rolePermission.model.js";
+import ActivityLog from "../modules/auth/activityLog.model.js";
 
 // User ↔ Role
 User.belongsToMany(Role, {
@@ -34,3 +35,5 @@ Permission.belongsToMany(Role, {
     otherKey: "role_code",
     sourceKey: "code",
 });
+
+// (Không cần associations cho ActivityLog, chỉ import để sync model)
