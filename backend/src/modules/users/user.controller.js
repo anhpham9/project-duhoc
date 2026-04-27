@@ -3,9 +3,28 @@ import { sendNotification } from "../notifications/notification.service.js";
 import { logAudit } from "../../utils/auditLogger.js";
 import { logActivity } from "../../utils/activityLogger.js";
 
+// Lấy danh sách user có hỗ trợ tìm kiếm, lọc, sắp xếp
 export const getAllUsers = async (req, res) => {
-    const users = await userRepo.getAllUsersWithRoles();
-    res.json({ users });
+    const {
+        search = "",
+        role,
+        active,
+        sort_by = "id",
+        sort_dir = "asc",
+        page = 1,
+        page_size = 20
+    } = req.query;
+
+    const { users, total } = await userRepo.searchUsersWithFilters({
+        search,
+        role,
+        active,
+        sort_by,
+        sort_dir,
+        page: Number(page),
+        page_size: page_size === 'all' ? 'all' : Number(page_size)
+    });
+    res.json({ users, total });
 };
 
 export const getUserById = async (req, res) => {

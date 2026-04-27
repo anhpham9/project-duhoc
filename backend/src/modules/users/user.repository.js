@@ -1,8 +1,59 @@
+import { Op } from "sequelize";
 import User from "./user.model.js";
 import Role from "../roles/role.model.js";
 import Permission from "../permissions/permission.model.js";
 import UserRole from "../userRoles/userRole.model.js";
 import sequelize from "../../db/index.js";
+
+// Tìm kiếm, lọc, sắp xếp user
+export const searchUsersWithFilters = async ({ search = "", role, active, sort_by = "id", sort_dir = "asc", page = 1, page_size = 20 }) => {
+    const where = {};
+    if (search) {
+        where[Op.or] = [
+            { username: { [Op.iLike]: `%${search}%` } },
+            { name: { [Op.iLike]: `%${search}%` } },
+            { email: { [Op.iLike]: `%${search}%` } },
+            { phone: { [Op.iLike]: `%${search}%` } }
+        ];
+    }
+    if (active === "true" || active === true) where.is_active = true;
+    if (active === "false" || active === false) where.is_active = false;
+
+    // include role filter
+    const include = [
+        {
+            model: Role,
+            attributes: ["id", "code", "description"],
+            through: { attributes: [] },
+        }
+    ];
+    if (role && role !== "all") {
+        include[0].where = { id: role };
+    }
+
+    // sort
+    let order = [["id", "ASC"]];
+    const validSort = ["id", "username", "email", "name", "phone", "is_active"];
+    if (validSort.includes(sort_by)) {
+        order = [[sort_by, sort_dir.toLowerCase() === "desc" ? "DESC" : "ASC"]];
+    } else if (sort_by === "role_code") {
+        // Sắp xếp theo code của role đầu tiên (nếu có)
+        order = [[{ model: Role }, "code", sort_dir.toLowerCase() === "desc" ? "DESC" : "ASC"]];
+    }
+
+    // Pagination
+    let limit, offset;
+    if (page_size !== 'all') {
+        limit = page_size;
+        offset = (page - 1) * page_size;
+    }
+
+    // Đếm tổng số bản ghi
+    const total = await User.count({ where, include });
+    // Lấy dữ liệu trang
+    const users = await User.findAll({ where, include, order, ...(limit ? { limit, offset } : {}) });
+    return { users, total };
+};
 
 export const getAllUsers = async () => {
     return User.findAll();

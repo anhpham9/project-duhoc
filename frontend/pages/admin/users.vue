@@ -3,17 +3,97 @@
         <h1>Quản lý người dùng</h1>
         <div class="actions">
             <button @click="showAdd = true">Thêm người dùng</button>
+            <input v-model="search" placeholder="Tìm kiếm username, tên, email, phone" class="search-input"
+                @keyup.enter="fetchUsers" @input="onSearchInput" />
+            <select v-model="filterRole" @change="fetchUsers">
+                <option value="all">Tất cả vai trò</option>
+                <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
+            </select>
+            <select v-model="filterActive" @change="fetchUsers">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+            <select v-model="pageSize" @change="changePageSize">
+                <option value="5">5/trang</option>
+                <option value="20">20/trang</option>
+                <option value="50">50/trang</option>
+                <option value="all">Tất cả</option>
+            </select>
+            <button @click="resetFilters">Xóa bộ lọc</button>
+        </div>
+        <div class="record-info" style="margin-bottom: 8px;">
+            <template v-if="users.length && total">
+                <span>
+                    Hiển thị
+                    <template v-if="pageSize === 'all'">
+                        1~{{ users.length }} / {{ total }} bản ghi
+                    </template>
+                    <template v-else>
+                        {{ (page - 1) * Number(pageSize) + 1 }}~{{ Math.min(page * Number(pageSize), total) }} / {{ total }} bản ghi
+                    </template>
+                </span>
+            </template>
         </div>
         <table class="user-table">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Họ tên</th>
-                    <th>Điện thoại</th>
-                    <th>Active</th>
-                    <th>Role</th>
+                    <th>
+                        ID
+                        <button class="sort-btn" @click="toggleSort('id')">
+                            <span v-if="sortBy === 'id' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'id' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Username
+                        <button class="sort-btn" @click="toggleSort('username')">
+                            <span v-if="sortBy === 'username' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'username' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Email
+                        <button class="sort-btn" @click="toggleSort('email')">
+                            <span v-if="sortBy === 'email' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'email' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Họ tên
+                        <button class="sort-btn" @click="toggleSort('name')">
+                            <span v-if="sortBy === 'name' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'name' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Điện thoại
+                        <button class="sort-btn" @click="toggleSort('phone')">
+                            <span v-if="sortBy === 'phone' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'phone' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Active
+                        <button class="sort-btn" @click="toggleSort('is_active')">
+                            <span v-if="sortBy === 'is_active' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'is_active' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
+                    <th>
+                        Role
+                        <button class="sort-btn" @click="toggleSort('role_code')">
+                            <span v-if="sortBy === 'role_code' && sortDir === 'asc'">▲</span>
+                            <span v-else-if="sortBy === 'role_code' && sortDir === 'desc'">▼</span>
+                            <span v-else>⇅</span>
+                        </button>
+                    </th>
                     <th>Thao tác</th>
                 </tr>
             </thead>
@@ -60,6 +140,14 @@
                 </form>
             </div>
         </div>
+        <!-- --- PHÂN TRANG UI --- -->
+        <div v-if="pageSize !== 'all' && Number(pageSize) > 0 && total > Number(pageSize)" class="pagination">
+            <button @click="goToPage(1)" :disabled="page === 1">«</button>
+            <button @click="goToPage(page - 1)" :disabled="page === 1">&lt;</button>
+            <span>Trang {{ page }} / {{ Math.ceil(total / Number(pageSize)) }}</span>
+            <button @click="goToPage(page + 1)" :disabled="page >= Math.ceil(total / Number(pageSize))">&gt;</button>
+            <button @click="goToPage(Math.ceil(total / Number(pageSize)))" :disabled="page >= Math.ceil(total / Number(pageSize))">»</button>
+        </div>
     </div>
 </template>
 <script setup>
@@ -69,16 +157,59 @@ const roles = ref([])
 const showAdd = ref(false)
 const editingUser = ref(null)
 const form = ref({ username: '', name: '', email: '', phone: '', password: '', is_active: true, role_id: '' })
+const search = ref('')
+const filterRole = ref('all')
+const filterActive = ref('all')
+const sortBy = ref('id')
+const sortDir = ref('asc')
+const pageSize = ref('5')
+const page = ref(1)
+const total = ref(0)
 
 async function fetchUsers() {
-    const res = await $fetch('/api/users', { credentials: 'include' })
+    const params = {
+        search: search.value,
+        role: filterRole.value,
+        active: filterActive.value,
+        sort_by: sortBy.value,
+        sort_dir: sortDir.value,
+        page: page.value,
+        page_size: pageSize.value
+    }
+    if (!params.search) delete params.search
+    if (params.role === 'all') delete params.role
+    if (params.active === 'all') delete params.active
+    if (params.sort_by === 'id' && params.sort_dir === 'asc') {
+        delete params.sort_by
+        delete params.sort_dir
+    }
+    if (params.page === 1) delete params.page
+    const query = new URLSearchParams(params).toString()
+    const res = await $fetch(`/api/users${query ? '?' + query : ''}`, { credentials: 'include' })
     users.value = res.users
-    console.log('users.value', users.value)
+    total.value = res.total
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
     roles.value = res.roles
-    console.log('roles.value:', roles.value)
+}
+function toggleSort(col) {
+    if (sortBy.value === col) {
+        sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    } else {
+        sortBy.value = col
+        sortDir.value = 'asc'
+    }
+    fetchUsers()
+}
+function resetFilters() {
+    search.value = ''
+    filterRole.value = 'all'
+    filterActive.value = 'all'
+    sortBy.value = 'id'
+    sortDir.value = 'asc'
+    // Không reset page, pageSize khi xóa bộ lọc
+    fetchUsers()
 }
 function editUser(user) {
     editingUser.value = user
@@ -110,9 +241,29 @@ async function updateUserRole(user) {
     await $fetch('/api/users/assign-role', { method: 'POST', body: { userId: user.id, roleId: user.role_id }, credentials: 'include' })
     fetchUsers()
 }
-onMounted(() => {
+function changePageSize() {
+    page.value = 1
     fetchUsers()
+}
+function goToPage(p) {
+    // Chỉ cho phép chuyển trang hợp lệ
+    if (pageSize.value === 'all') return;
+    const maxPage = Math.ceil(total.value / Number(pageSize.value));
+    if (p < 1 || p > maxPage) return;
+    page.value = p;
+    fetchUsers();
+}
+let searchTimeout = null;
+function onSearchInput() {
+    page.value = 1;
+    if (searchTimeout) clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        fetchUsers();
+    }, 400); // debounce 400ms
+}
+onMounted(() => {
     fetchRoles()
+    fetchUsers()
 })
 definePageMeta({
     layout: "admin",
@@ -165,5 +316,23 @@ definePageMeta({
     display: flex;
     gap: 1em;
     justify-content: flex-end;
+}
+</style>
+<style scoped>
+.search-input {
+    margin-left: 1em;
+    padding: 0.3em 0.7em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.sort-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    margin-left: 0.2em;
+    color: #888;
+    padding: 0;
 }
 </style>
