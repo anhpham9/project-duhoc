@@ -115,7 +115,7 @@
                     </td>
                     <td>
                         <button @click="editUser(user)">Sửa</button>
-                        <button @click="deleteUser(user.id)">Xóa</button>
+                        <button v-if="hasPermission('user:delete')" @click="deleteUser(user.id)">Xóa</button>
                     </td>
                 </tr>
             </tbody>
@@ -152,6 +152,9 @@
 </template>
 <script setup>
 import { ref, onMounted } from 'vue'
+import { usePermissionGuard } from '~/composables/usePermissionGuard'
+import { useState } from '#app'
+
 const users = ref([])
 const roles = ref([])
 const showAdd = ref(false)
@@ -165,6 +168,8 @@ const sortDir = ref('asc')
 const pageSize = ref('5')
 const page = ref(1)
 const total = ref(0)
+const currentUser = useState('currentUser')
+const { hasPermission } = usePermissionGuard(currentUser)
 
 async function fetchUsers() {
     const params = {

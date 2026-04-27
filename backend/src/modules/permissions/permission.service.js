@@ -1,7 +1,7 @@
 // xử lý logic nghiệp vụ liên quan đến permissions, gọi repository để tương tác DB, trả về dữ liệu cho controller
-import User from "../modules/users/user.model.js";
-import Role from "../modules/roles/role.model.js";
-import Permission from "../modules/permissions/permission.model.js";
+import User from "../users/user.model.js";
+import Role from "../roles/role.model.js";
+import Permission from "../permissions/permission.model.js";
 import { getUserWithRolesAndPermissions } from "../users/user.repository.js";
 
 const permissionCache = new Map();

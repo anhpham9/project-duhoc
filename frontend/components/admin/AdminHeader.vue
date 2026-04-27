@@ -12,26 +12,19 @@
     </header>
 </template>
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-
-const user = ref(null);
+import { computed } from 'vue'
+import { useCookie } from '#imports'
+const currentUser = useCookie('currentUser', { default: () => null })
+const user = computed(() => currentUser.value)
 const lastLoginText = computed(() => {
     if (!user.value?.last_login) return 'Chưa có';
     const d = new Date(user.value.last_login);
     return d.toLocaleString();
-});
-
-onMounted(async () => {
-    try {
-        const res = await $fetch('/api/auth/me', { credentials: 'include' });
-        user.value = res;
-    } catch (e) {
-        user.value = null;
-    }
-});
+})
 const onLogout = async () => {
     try {
         await $fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        currentUser.value = null
         window.location.reload();
         return navigateTo('/login');
     } catch (e) {

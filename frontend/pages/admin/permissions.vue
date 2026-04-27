@@ -22,9 +22,20 @@
     </div>
 </template>
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import PermissionTree from '~/components/admin/PermissionTree.vue'
-const isSuperadmin = ref(false)
+
+import { useCookie } from '#imports'
+import { usePermissionGuard } from '~/composables/usePermissionGuard'
+const currentUser = useCookie('currentUser', { default: () => null })
+const { hasPermission } = usePermissionGuard(currentUser)
+
+const isSuperadmin = computed(() => {
+    // Quyền mạnh nhất: permissions.manage hoặc user có role_id === 1
+    if (!currentUser.value) return false
+    if (Array.isArray(currentUser.value.role_ids) && currentUser.value.role_ids.includes(1)) return true
+    if (Array.isArray(currentUser.value.permissions) && currentUser.value.permissions.includes('permissions.manage')) return true
+    return false
+})
+
 const roles = ref([])
 const permissions = ref([])
 const selectedRoleId = ref(null)
@@ -60,14 +71,6 @@ const permissionTree = computed(() => {
     return Object.values(groups)
 })
 
-async function checkSuperadmin() {
-    try {
-        const me = await $fetch('/api/auth/me', { credentials: 'include' })
-        isSuperadmin.value = Array.isArray(me.role_ids) ? me.role_ids.includes(1) : false
-    } catch {
-        isSuperadmin.value = false
-    }
-}
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
     roles.value = res.roles
@@ -93,7 +96,6 @@ async function saveRolePermissions() {
     alert('Lưu phân quyền thành công!')
 }
 onMounted(() => {
-    checkSuperadmin()
     fetchRoles()
     fetchPermissions()
 })

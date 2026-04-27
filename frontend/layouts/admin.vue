@@ -16,12 +16,14 @@
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
+import { useCookie } from '#imports'
 import { useRoute } from 'vue-router'
 import AdminHeader from '~/components/admin/AdminHeader.vue'
 import AdminSidebar from '~/components/admin/AdminSidebar.vue'
 const loading = ref(true)
 const route = useRoute()
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+const currentUser = useCookie('currentUser', { default: () => null })
 
 const checkAuth = async () => {
     if (!isAdminRoute.value) {
@@ -30,8 +32,10 @@ const checkAuth = async () => {
     }
     loading.value = true
     try {
-        await $fetch('/api/auth/me', { credentials: 'include' })
+        const res = await $fetch('/api/auth/me', { credentials: 'include' })
+        currentUser.value = res // Đảm bảo có trường permissions
     } catch {
+        currentUser.value = null
         // Nếu chưa đăng nhập, sẽ bị middleware chuyển hướng
     } finally {
         loading.value = false
