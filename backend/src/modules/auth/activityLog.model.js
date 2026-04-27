@@ -21,8 +21,8 @@ const ActivityLog = sequelize.define(
                 "reject"
             ), allowNull: false
         },
-        object_type: { type: DataTypes.STRING },
-        object_id: { type: DataTypes.BIGINT },
+        entity_type: { type: DataTypes.STRING },
+        entity_id: { type: DataTypes.BIGINT },
         data: { type: DataTypes.JSONB },
         created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     },

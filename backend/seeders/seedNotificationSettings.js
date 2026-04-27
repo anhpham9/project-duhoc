@@ -3,6 +3,7 @@ import db from "../src/config/db.config.js";
 
 const notificationTypes = [
     'system',
+    'page',
     'contact',
     'news',
     'schools',

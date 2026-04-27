@@ -10,6 +10,7 @@ import authRoutes from "./modules/auth/auth.routes.js";
 import activityLogRoutes from "./modules/admin/activityLog.routes.js";
 import permissionRoutes from "./modules/permissions/permission.routes.js";
 import roleRoutes from "./modules/roles/role.routes.js";
+import userRoutes from "./modules/users/user.routes.js";
 
 const app = express();
 
@@ -28,5 +29,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/activity-logs", activityLogRoutes);
 app.use("/api/permissions", permissionRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/users", userRoutes);
 
 export default app;

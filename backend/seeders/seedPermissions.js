@@ -50,16 +50,42 @@ const run = async () => {
                 ('static_pages.update', 'Update static pages'),
                 ('static_pages.delete', 'Delete static pages'),
 
+                -- Page Contents
+                ('page_contents.manage', 'Manage page contents'),
+                ('page_contents.create', 'Create page contents'),
+                ('page_contents.update', 'Update page contents'),
+                ('page_contents.delete', 'Delete page contents'),
+
+
                 -- Notifications
                 ('notifications.view', 'View notifications'),
                 ('notifications.manage', 'Manage notifications'),
+
+                -- Notifications Settings
+                ('notification_settings.view', 'View notification settings'),
+                ('notification_settings.manage', 'Manage notification settings'),
+
+                -- Roles
+                ('roles.manage', 'Manage roles'),
+                ('roles.create', 'Create roles'),
+                ('roles.update', 'Update roles'),
+                ('roles.delete', 'Delete roles'),
+
+                -- Permissions
+                ('permissions.manage', 'Manage permissions'),
+                ('permissions.create', 'Create permissions'),
+                ('permissions.update', 'Update permissions'),
+                ('permissions.delete', 'Delete permissions'),
 
                 -- Files
                 ('files.upload', 'Upload files'),
                 ('files.delete', 'Delete files'),
 
                 -- Audit Logs
-                ('audit_logs.view', 'View audit logs')
+                ('audit_logs.view', 'View audit logs'),
+
+                -- Activity Logs
+                ('activity_logs.view', 'View activity logs')
             ON CONFLICT (code) DO NOTHING
         `);
 

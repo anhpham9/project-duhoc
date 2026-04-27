@@ -11,8 +11,8 @@ import {
 
 const router = express.Router();
 
-router.get("/", authMiddleware, superadminMiddleware, getAllRoles);
-router.get("/:id", authMiddleware, superadminMiddleware, getRoleById);
+router.get("/", authMiddleware, getAllRoles);
+router.get("/:id", authMiddleware, getRoleById);
 router.post("/", authMiddleware, superadminMiddleware, createRole);
 router.put("/:id", authMiddleware, superadminMiddleware, updateRole);
 router.delete("/:id", authMiddleware, superadminMiddleware, deleteRole);

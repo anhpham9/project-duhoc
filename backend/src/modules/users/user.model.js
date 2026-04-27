@@ -28,12 +28,22 @@ const User = sequelize.define(
             defaultValue: true,
         },
         last_login: DataTypes.DATE,
+        created_by: {
+            type: DataTypes.BIGINT,
+            allowNull: true,
+        },
+        deleted_at: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
     },
     {
         tableName: "users",
         timestamps: true,
         createdAt: "created_at",
         updatedAt: "updated_at",
+        paranoid: true, // Bật soft delete
+        deletedAt: "deleted_at",
     }
 );
 
