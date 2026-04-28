@@ -26,7 +26,7 @@ export function usePermissionGuard(currentUser) {
     function hasAnyPermission(permissionList) {
         const permissions = getRawPermissions()
         const result = permissionList.some(p => permissions.includes(p))
-        console.log(`[usePermissionGuard] Check any permission in`, permissionList, ':', result, permissions)
+        // console.log(`[usePermissionGuard] Check any permission in`, permissionList, ':', result, permissions)
         return result
     }
     return { hasPermission, hasAnyPermission }

@@ -62,15 +62,16 @@ export const createUser = async (req, res) => {
     res.json({ user });
 };
 
+
 export const updateUser = async (req, res) => {
     const { id } = req.params;
     const data = { ...req.body };
-    
     const currentUserId = req.user.id;
     const isSelf = String(currentUserId) === String(id);
     const oldUser = await userRepo.getUserById(id);
     // Xóa các trường không hợp lệ
     delete data.Roles;
+    delete data.role_ids;
     delete data.role_id;
     delete data.id;
     delete data.created_at;
@@ -93,13 +94,10 @@ export const updateUser = async (req, res) => {
         updatedUser = await userRepo.getUserById(id);
     }
 
-    // Chỉ gán lại role nếu role_id khác role hiện tại
-    if (req.body.role_id) {
-        const currentRoleId = oldUser.Roles && oldUser.Roles.length ? oldUser.Roles[0].id : null;
-        if (Number(req.body.role_id) !== Number(currentRoleId)) {
-            await userRepo.assignRoleToUser(id, req.body.role_id);
-            updatedUser = await userRepo.getUserById(id);
-        }
+    // Gán lại roles nếu có role_ids truyền lên
+    if (Array.isArray(req.body.role_ids)) {
+        await userRepo.assignRolesToUser(id, req.body.role_ids);
+        updatedUser = await userRepo.getUserById(id);
     }
 
     if (isSelf) {
@@ -151,11 +149,13 @@ export const deleteUser = async (req, res) => {
     res.json({ success: true });
 };
 
+// Multi-role assignment
 export const assignRoleToUser = async (req, res) => {
-    const { userId, roleId } = req.body;
-
-    await userRepo.assignRoleToUser(userId, roleId);
-
-    res.json({ message: "Role assigned" });
+    const { userId, roleIds } = req.body;
+    if (!userId || !Array.isArray(roleIds)) {
+        return res.status(400).json({ message: "userId and roleIds[] required" });
+    }
+    await userRepo.assignRolesToUser(userId, roleIds);
+    res.json({ message: "Roles assigned" });
 };
 

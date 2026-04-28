@@ -82,7 +82,7 @@ watch(() => route.path, checkAuth)
 
 .admin-content {
     flex: 1;
-    padding: 32px 32px 32px 32px;
+    padding: 20px;
     background: #f9f9f9;
     min-height: calc(100vh - 60px);
     overflow-x: auto;
@@ -95,7 +95,7 @@ watch(() => route.path, checkAuth)
         min-height: calc(100vh - 50px);
     }
     .admin-content {
-        padding: 16px 6px 16px 6px;
+        padding: 10px;
         min-height: calc(100vh - 50px);
     }
 }

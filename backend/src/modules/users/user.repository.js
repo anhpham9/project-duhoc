@@ -104,14 +104,17 @@ export const getUserWithRolesAndPermissions = async (userId) => {
     });
 };
 
+
 /**
- * Gán role cho user (chỉ 1 role)
- * - Xóa hết role cũ, gán role mới
+ * Gán nhiều role cho user
+ * - Xóa hết role cũ, gán các role mới
  * - Dùng transaction để đảm bảo an toàn
  */
-export const assignRoleToUser = async (userId, roleId) => {
+export const assignRolesToUser = async (userId, roleIds) => {
     return sequelize.transaction(async (t) => {
         await UserRole.destroy({ where: { user_id: userId }, transaction: t });
-        await UserRole.create({ user_id: userId, role_id: roleId }, { transaction: t });
+        if (Array.isArray(roleIds) && roleIds.length > 0) {
+            await UserRole.bulkCreate(roleIds.map(role_id => ({ user_id: userId, role_id })), { transaction: t });
+        }
     });
 };
