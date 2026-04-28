@@ -10,19 +10,24 @@ export const getUserPermissions = async (userId) => {
     if (permissionCache.has(userId)) {
         return permissionCache.get(userId);
     }
-    
-    const user = await getUserWithRolesAndPermissions(userId);
 
+    const user = await getUserWithRolesAndPermissions(userId);
     if (!user) return [];
+
+    // Nếu user có role_id = 1 (superadmin) thì trả về tất cả quyền
+    const isSuperadmin = user.Roles.some(role => role.id === 1);
+    if (isSuperadmin) {
+        const allPerms = await Permission.findAll({ attributes: ["code"] });
+        const allCodes = allPerms.map(p => p.code);
+        permissionCache.set(userId, allCodes);
+        return allCodes;
+    }
 
     const permissions = user.Roles.flatMap((role) =>
         role.Permissions.map((p) => p.code)
     );
-
     const uniquePermissions = [...new Set(permissions)];
-
     permissionCache.set(userId, uniquePermissions);
-
     return uniquePermissions;
 };
 

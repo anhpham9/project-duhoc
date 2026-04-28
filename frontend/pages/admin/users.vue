@@ -1,44 +1,44 @@
 <template>
     <div class="users-page">
-        <h1>Quản lý người dùng</h1>
-        <div class="actions">
-            <button @click="showAdd = true">Thêm người dùng</button>
-            <input v-model="search" placeholder="Tìm kiếm username, tên, email, phone" class="search-input"
-                @keyup.enter="fetchUsers" @input="onSearchInput" />
-            <select v-model="filterRole" @change="fetchUsers">
-                <option value="all">Tất cả vai trò</option>
-                <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
-            </select>
-            <select v-model="filterActive" @change="fetchUsers">
-                <option value="all">Tất cả trạng thái</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-            </select>
-            <select v-model="pageSize" @change="changePageSize">
-                <option value="5">5/trang</option>
-                <option value="20">20/trang</option>
-                <option value="50">50/trang</option>
-                <option value="all">Tất cả</option>
-            </select>
-            <button @click="resetFilters">Xóa bộ lọc</button>
-        </div>
-        <div class="record-info" style="margin-bottom: 8px;">
-            <template v-if="users.length && total">
-                <span>
-                    Hiển thị
-                    <template v-if="pageSize === 'all'">
-                        1~{{ users.length }} / {{ total }} bản ghi
-                    </template>
-                    <template v-else>
-                        {{ (page - 1) * Number(pageSize) + 1 }}~{{ Math.min(page * Number(pageSize), total) }} / {{ total }} bản ghi
-                    </template>
-                </span>
-            </template>
-        </div>
-        <table class="user-table">
-            <thead>
-                <tr>
-                    <th>
+        <div class="container">
+            <h1>Quản lý người dùng</h1>
+            <div class="actions">
+                <button @click="showAdd = true">Thêm người dùng</button>
+                <BaseSearchFilter v-model="search" @update:search="onSearchInput" />
+                <select v-model="filterRole" @change="onFilterChange">
+                    <option value="all">Tất cả vai trò</option>
+                    <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
+                </select>
+                <select v-model="filterActive" @change="onFilterChange">
+                    <option value="all">Tất cả trạng thái</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+                <select v-model="pageSize" @change="changePageSize">
+                    <option value="5">5/trang</option>
+                    <option value="20">20/trang</option>
+                    <option value="50">50/trang</option>
+                    <option value="all">Tất cả</option>
+                </select>
+                <button @click="resetFilters">Xóa bộ lọc</button>
+            </div>
+            <div class="record-info" style="margin-bottom: 8px;">
+                <template v-if="users.length && total">
+                    <span>
+                        Hiển thị
+                        <template v-if="pageSize === 'all'">
+                            1~{{ users.length }} / {{ total }} bản ghi
+                        </template>
+                        <template v-else>
+                            {{ (page - 1) * Number(pageSize) + 1 }}~{{ Math.min(page * Number(pageSize), total) }} / {{
+                                total }} bản ghi
+                        </template>
+                    </span>
+                </template>
+            </div>
+            <BaseTable>
+                <template #table-header>
+                    <th class="center">
                         ID
                         <button class="sort-btn" @click="toggleSort('id')">
                             <span v-if="sortBy === 'id' && sortDir === 'asc'">▲</span>
@@ -78,7 +78,7 @@
                             <span v-else>⇅</span>
                         </button>
                     </th>
-                    <th>
+                    <th class="center">
                         Active
                         <button class="sort-btn" @click="toggleSort('is_active')">
                             <span v-if="sortBy === 'is_active' && sortDir === 'asc'">▲</span>
@@ -95,65 +95,62 @@
                         </button>
                     </th>
                     <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr v-for="user in users" :key="user.id">
-                    <td>{{ user.id }}</td>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>{{ user.name }}</td>
-                    <td>{{ user.phone }}</td>
-                    <td>{{ user.is_active ? '✔' : '✖' }}</td>
-                    <td>
-                        <template v-if="user.Roles && user.Roles.length">
-                            <span v-for="role in user.Roles" :key="role.id" class="role-badge">{{ role.code }}</span>
-                        </template>
-                        <!-- <select v-model="user.role_id" @change="updateUserRole(user)">
+                </template>
+                <template #table-body>
+                    <tr v-for="user in users" :key="user.id">
+                        <td class="center">{{ user.id }}</td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.name }}</td>
+                        <td>{{ user.phone }}</td>
+                        <td class="center">{{ user.is_active ? '✔' : '✖' }}</td>
+                        <td>
+                            <template v-if="user.Roles && user.Roles.length">
+                                <span v-for="role in user.Roles" :key="role.id" class="role-badge">{{ role.code
+                                    }}</span>
+                            </template>
+                        </td>
+                        <td>
+                            <button @click="editUser(user)">Sửa</button>
+                            <button v-if="hasPermission('user:delete')" @click="deleteUser(user.id)">Xóa</button>
+                        </td>
+                    </tr>
+                </template>
+            </BaseTable>
+            <!-- Thêm/sửa user -->
+            <div v-if="showAdd || editingUser" class="modal">
+                <div class="modal-content">
+                    <h3>{{ editingUser ? 'Sửa người dùng' : 'Thêm người dùng' }}</h3>
+                    <form @submit.prevent="saveUser">
+                        <input v-model="form.username" placeholder="Username" required />
+                        <input v-model="form.name" placeholder="Họ tên" />
+                        <input v-model="form.email" placeholder="Email" />
+                        <input v-model="form.phone" placeholder="Điện thoại" />
+                        <label><input type="checkbox" v-model="form.is_active" /> Active</label>
+                        <select v-model="form.role_id">
                             <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
-                        </select> -->
-                    </td>
-                    <td>
-                        <button @click="editUser(user)">Sửa</button>
-                        <button v-if="hasPermission('user:delete')" @click="deleteUser(user.id)">Xóa</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <!-- Thêm/sửa user -->
-        <div v-if="showAdd || editingUser" class="modal">
-            <div class="modal-content">
-                <h3>{{ editingUser ? 'Sửa người dùng' : 'Thêm người dùng' }}</h3>
-                <form @submit.prevent="saveUser">
-                    <input v-model="form.username" placeholder="Username" required />
-                    <input v-model="form.name" placeholder="Họ tên" />
-                    <input v-model="form.email" placeholder="Email" />
-                    <input v-model="form.phone" placeholder="Điện thoại" />
-                    <label><input type="checkbox" v-model="form.is_active" /> Active</label>
-                    <select v-model="form.role_id">
-                        <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
-                    </select>
-                    <div class="modal-actions">
-                        <button type="submit">Lưu</button>
-                        <button type="button" @click="closeModal">Hủy</button>
-                    </div>
-                </form>
+                        </select>
+                        <div class="modal-actions">
+                            <button type="submit">Lưu</button>
+                            <button type="button" @click="closeModal">Hủy</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
-        <!-- --- PHÂN TRANG UI --- -->
-        <div v-if="pageSize !== 'all' && Number(pageSize) > 0 && total > Number(pageSize)" class="pagination">
-            <button @click="goToPage(1)" :disabled="page === 1">«</button>
-            <button @click="goToPage(page - 1)" :disabled="page === 1">&lt;</button>
-            <span>Trang {{ page }} / {{ Math.ceil(total / Number(pageSize)) }}</span>
-            <button @click="goToPage(page + 1)" :disabled="page >= Math.ceil(total / Number(pageSize))">&gt;</button>
-            <button @click="goToPage(Math.ceil(total / Number(pageSize)))" :disabled="page >= Math.ceil(total / Number(pageSize))">»</button>
+            <!-- --- PHÂN TRANG UI --- -->
+            <BasePagination v-if="pageSize !== 'all' && Number(pageSize) > 0 && total > Number(pageSize)" v-model="page"
+                :total-pages="Math.ceil(total / Number(pageSize))" />
         </div>
     </div>
 </template>
 <script setup>
+
 import { ref, onMounted } from 'vue'
 import { usePermissionGuard } from '~/composables/usePermissionGuard'
 import { useState } from '#app'
+import BaseTable from '~/components/admin/base/BaseTable.vue'
+import BasePagination from '~/components/admin/base/BasePagination.vue'
+import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
 
 const users = ref([])
 const roles = ref([])
@@ -190,13 +187,17 @@ async function fetchUsers() {
     }
     if (params.page === 1) delete params.page
     const query = new URLSearchParams(params).toString()
-    const res = await $fetch(`/api/users${query ? '?' + query : ''}`, { credentials: 'include' })
+    const res = await $fetch(`/api/users${query ? '?' + query : ''}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+    })
     users.value = res.users
     total.value = res.total
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
     roles.value = res.roles
+    // console.log('[fetchRoles] Fetched roles:', roles.value);
 }
 function toggleSort(col) {
     if (sortBy.value === col) {
@@ -265,6 +266,10 @@ function onSearchInput() {
     searchTimeout = setTimeout(() => {
         fetchUsers();
     }, 400); // debounce 400ms
+}
+function onFilterChange() {
+    page.value = 1;
+    fetchUsers();
 }
 onMounted(() => {
     fetchRoles()

@@ -6,17 +6,17 @@ import ActivityLog from "../modules/auth/activityLog.model.js";
  * @param {Object} params
  * @param {number} params.user_id - ID user thực hiện
  * @param {string} params.action - Hành động (login, logout, refresh_token...)
- * @param {string} [params.object_type] - Loại đối tượng tác động
- * @param {number} [params.object_id] - ID đối tượng tác động
+ * @param {string} [params.entity_type] - Loại đối tượng tác động
+ * @param {number} [params.entity_id] - ID đối tượng tác động
  * @param {Object} [params.data] - Dữ liệu bổ sung (JSON)
  */
-export async function logActivity({ user_id, action, object_type = null, object_id = null, data = null }) {
+export async function logActivity({ user_id, action, entity_type = null, entity_id = null, data = null }) {
     try {
         await ActivityLog.create({
             user_id,
             action,
-            object_type,
-            object_id,
+            entity_type,
+            entity_id,
             data,
         });
     } catch (err) {

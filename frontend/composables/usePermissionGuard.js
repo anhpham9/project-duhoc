@@ -6,7 +6,7 @@ export function usePermissionGuard(currentUser) {
     // Helper: always get raw array from permissions
     function getRawPermissions() {
         if (!currentUser.value || !currentUser.value.permissions) {
-            console.warn('[usePermissionGuard] No currentUser or permissions:', currentUser.value)
+            // console.warn('[usePermissionGuard] No currentUser:', currentUser.value)
             return []
         }
         const perms = currentUser.value.permissions

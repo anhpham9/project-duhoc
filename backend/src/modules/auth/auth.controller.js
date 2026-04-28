@@ -44,12 +44,14 @@ export const login = async (req, res) => {
         httpOnly: true,
         secure: false, // true nếu HTTPS
         sameSite: "lax",
+        // maxAge: 15 * 60 * 1000 // 15 phút // hết hạn khi đóng trình duyệt, không set maxAge
     });
 
     res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: false, // true nếu HTTPS
         sameSite: "lax",
+        // maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
     });
 
     res.json({ message: "Login success" });

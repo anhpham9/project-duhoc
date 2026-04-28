@@ -5,6 +5,12 @@ const run = async () => {
         await db.query(`
             INSERT INTO permissions (code, description)
             VALUES
+                -- categories
+                ('categories.manage', 'Manage categories'),
+                ('categories.create', 'Create categories'),
+                ('categories.update', 'Update categories'),
+                ('categories.delete', 'Delete categories'),
+
                 -- News
                 ('news.manage', 'Manage news'),
                 ('news.create', 'Create news'),
