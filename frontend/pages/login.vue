@@ -1,11 +1,56 @@
 <template>
-    <div class="login-page">
-        <form @submit.prevent="onLogin">
-            <input v-model="username" type="text" placeholder="Username" required />
-            <input v-model="password" type="password" placeholder="Password" required />
-            <button type="submit">Đăng nhập</button>
-            <div v-if="error" class="error">{{ error }}</div>
-        </form>
+    <div class="login-wrapper">
+        <BaseToast ref="toastRef" />
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-container">
+                    <img src="/logo02.png" alt="Du Học NB" class="login-logo">
+                </div>
+                <h1>Đăng Nhập Quản Trị</h1>
+            </div>
+
+            <form class="login-form" id="loginForm" @submit.prevent="onLogin">
+                <div class="form-group">
+                    <label for="username" hidden>Tên đăng nhập</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input v-model="username" type="text" id="username" name="username" placeholder="Nhập tên đăng nhập" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" hidden>Mật khẩu</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input v-model="password" :type="showPassword ? 'text' : 'password'" id="password" name="password" placeholder="Nhập mật khẩu" required autocomplete="off">
+                        <button type="button" class="toggle-password" @click="togglePassword">
+                            <i class="fas" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-options">
+                    <div class="remember-me">
+                        <input v-model="rememberMe" type="checkbox" id="remember" name="remember">
+                        <label for="remember">Ghi nhớ đăng nhập</label>
+                    </div>
+                    <a href="#" class="forgot-password">Quên mật khẩu?</a>
+                </div>
+
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Đăng Nhập
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>&copy; 2024 Du Học NB. Bảo mật và an toàn.</p>
+                <div class="security-info">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Hệ thống được bảo mật SSL</span>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -18,15 +63,36 @@ definePageMeta({ layout: "empty", middleware: 'guest', ssr: false });
 const username = ref('');
 const password = ref('');
 const error = ref('');
+const showPassword = ref(false);
+const rememberMe = ref(false);
 const router = useRouter();
+
+import BaseToast from '~/components/admin/base/BaseToast.vue'
+import { ref as vueRef } from 'vue'
+const toastRef = vueRef()
+function showToast(message, type = 'error', duration = 30000) {
+    toastRef.value?.open(message, type, duration)
+}
+
+// Tự động điền username nếu đã lưu
+if (typeof window !== 'undefined') {
+    const remembered = localStorage.getItem('rememberedUsername');
+    if (remembered) {
+        username.value = remembered;
+        rememberMe.value = true;
+    }
+}
+
+const togglePassword = () => {
+    showPassword.value = !showPassword.value;
+};
 
 const onLogin = async () => {
     error.value = '';
     try {
-        // console.log('Attempting login with:', username.value, password.value);
         await $fetch('/api/auth/login', {
             method: 'POST',
-            body: { username: username.value, password: password.value },
+            body: { username: username.value, password: password.value, rememberMe: rememberMe.value },
             credentials: 'include',
         });
         // Sau khi login thành công, lấy user và set cookie
@@ -34,74 +100,24 @@ const onLogin = async () => {
         if (typeof useCookie === 'function') {
             const currentUser = useCookie('currentUser');
             currentUser.value = user;
+            // Nếu rememberMe, lưu username vào localStorage
+            if (rememberMe.value) {
+                localStorage.setItem('rememberedUsername', username.value);
+            } else {
+                localStorage.removeItem('rememberedUsername');
+            }
         }
-        router.push('/admin');
+        showToast('Đăng nhập thành công!', 'success');
+        setTimeout(() => router.push('/admin'), 800);
     } catch (err) {
-        error.value = err?.data?.message || 'Đăng nhập thất bại';
+        if (err?.data?.message === 'LOGIN_ACCOUNT_INACTIVE') {
+            showToast('Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt. Vui lòng liên hệ quản trị viên.', 'error');
+        } else {
+            showToast('Đăng nhập thất bại. Vui lòng kiểm tra lại!', 'error');
+        }
     }
 };
 </script>
 
 <style scoped>
-.login-page {
-    max-width: 400px;
-    margin: 80px auto;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 24px rgba(44,62,80,0.08), 0 1.5px 4px rgba(44,62,80,0.04);
-    padding: 36px 32px 28px 32px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-input[type="text"], input[type="password"] {
-    width: 100%;
-    padding: 12px 14px;
-    border: 1.5px solid #dbe2ef;
-    border-radius: 6px;
-    font-size: 1em;
-    background: #f7fafc;
-    transition: border 0.2s, box-shadow 0.2s;
-    outline: none;
-}
-input[type="text"]:focus, input[type="password"]:focus {
-    border-color: #1976d2;
-    background: #fff;
-    box-shadow: 0 0 0 2px #1976d220;
-}
-button[type="submit"] {
-    width: 100%;
-    padding: 12px 0;
-    background: #1976d2;
-    color: #fff;
-    font-size: 1.08em;
-    font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background 0.18s;
-    margin-top: 8px;
-}
-button[type="submit"]:hover {
-    background: #1256a3;
-}
-.error {
-    color: #e74c3c;
-    margin-top: 8px;
-    font-size: 0.98em;
-    text-align: center;
-}
-@media (max-width: 600px) {
-    .login-page {
-        max-width: 98vw;
-        padding: 18px 6vw 18px 6vw;
-        margin: 32px auto;
-    }
-}
 </style>

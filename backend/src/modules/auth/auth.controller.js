@@ -10,15 +10,18 @@ import { logActivity } from "../../utils/activityLogger.js";
 export const login = async (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) {
-        return res.status(400).json({ message: "Missing username or password" });
+        return res.status(400).json({ message: "LOGIN_MISSING_CREDENTIALS" });
     }
     const user = await User.findOne({ where: { username } });
     if (!user) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: "LOGIN_FAILED" });
     }
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-        return res.status(401).json({ message: "Invalid username or password" });
+        return res.status(401).json({ message: "LOGIN_FAILED" });
+    }
+    if (user.is_active === false) {
+        return res.status(403).json({ message: "LOGIN_ACCOUNT_INACTIVE" });
     }
 
     // Cập nhật last_login
@@ -54,14 +57,14 @@ export const login = async (req, res) => {
         // maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
     });
 
-    res.json({ message: "Login success" });
+    res.json({ message: "LOGIN_SUCCESS" });
 };
 
 export const refresh = async (req, res) => {
     const token = req.cookies.refreshToken;
 
     if (!token) {
-        return res.status(401).json({ message: "No refresh token" });
+        return res.status(401).json({ message: "REFRESH_TOKEN_MISSING" });
     }
 
     try {
@@ -70,6 +73,13 @@ export const refresh = async (req, res) => {
         // check DB
         const exists = await findRefreshToken(token);
         if (!exists) throw new Error();
+
+        // Xóa refreshToken cũ
+        await deleteRefreshToken(token);
+
+        // Sinh refreshToken mới và lưu lại session
+        const newRefreshToken = generateRefreshToken({ id: decoded.id });
+        await saveRefreshToken(decoded.id, newRefreshToken, req);
 
         const newAccessToken = generateAccessToken({ id: decoded.id });
 
@@ -88,9 +98,16 @@ export const refresh = async (req, res) => {
             sameSite: "lax",
         });
 
-        res.json({ message: "Refreshed" });
+        res.cookie("refreshToken", newRefreshToken, {
+            httpOnly: true,
+            secure: false, // true nếu HTTPS
+            sameSite: "lax",
+            // maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+        });
+
+        res.json({ message: "REFRESH_SUCCESS" });
     } catch {
-        res.status(403).json({ message: "Invalid refresh token" });
+        res.status(403).json({ message: "REFRESH_TOKEN_INVALID" });
     }
 };
 
@@ -122,5 +139,5 @@ export const logout = async (req, res) => {
     }
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
-    res.json({ message: "Logged out" });
+    res.json({ message: "LOGOUT_SUCCESS" });
 };

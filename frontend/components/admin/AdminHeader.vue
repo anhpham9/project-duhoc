@@ -33,13 +33,15 @@
                     <button class="user-menu-item" @click="onLogout">Đăng xuất</button>
                 </div>
             </div>
-            <span class="last-login">Lần cuối đăng nhập: <b>{{ lastLoginText }}</b></span>
+            <span class="last-login">Lần cuối đăng nhập: <b>{{ formatSmartDate(user.last_login) }}</b></span>
         </div>
     </header>
 </template>
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useCookie } from '#imports'
+import { formatSmartDate, formatDate } from '~/utils/date'
+
 const currentUser = useCookie('currentUser', { default: () => null })
 const user = computed(() => currentUser.value)
 const lastLoginText = computed(() => {
@@ -50,7 +52,7 @@ const lastLoginText = computed(() => {
 
 // Redirect nếu chưa đăng nhập
 onMounted(() => {
-    console.log('[AdminHeader] user:', user.value, 'currentUser:', currentUser.value)
+    // console.log('[AdminHeader] user:', user.value, 'currentUser:', currentUser.value)
     if (!user.value) window.location.href = '/login'
 })
 
