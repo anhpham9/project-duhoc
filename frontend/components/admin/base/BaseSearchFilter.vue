@@ -1,6 +1,7 @@
 <template>
     <div class="filter-search">
-        <input class="search-input" v-model="search" @input="onInput" type="text" placeholder="Tìm kiếm..." />
+        <label for="search" hidden="hidden"></label>
+        <input id="search" class="search-input" v-model="search" @input="onInput" type="text" placeholder="Tìm kiếm..." />
         <slot></slot>
     </div>
 </template>

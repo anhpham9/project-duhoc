@@ -55,6 +55,14 @@ export const searchUsersWithFilters = async ({ search = "", role, active, sort_b
     return { users, total };
 };
 
+export const findUserByUsername = async (username) => {
+    return User.findOne({ where: { username } });
+}
+
+export const findUserByEmail = async (email) => {
+    return User.findOne({ where: { email } });
+}
+
 export const getAllUsers = async () => {
     return User.findAll();
 };
@@ -102,6 +110,10 @@ export const getUserWithRolesAndPermissions = async (userId) => {
             through: { attributes: [] },
         },
     });
+};
+
+export const deleteUserRolesByUserId = async (userId) => {
+    return UserRole.destroy({ where: { user_id: userId } });
 };
 
 

@@ -281,6 +281,16 @@ body {
     color: #ef6c00;
 }
 
+.action-btn.reset {
+    background: #fff3e0;
+    color: #f57400;
+}
+
+.action-btn.reset:hover {
+    background: #f57400;
+    color: white;
+}
+
 .action-btn.delete {
     background: #ffebee;
     color: #d32f2f;
@@ -300,4 +310,9 @@ body {
 }
 .status.inactive {
     color: #f44336;
+}
+
+.required {
+    color: red;
+    font-size: 12px;
 }

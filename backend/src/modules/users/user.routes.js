@@ -1,3 +1,6 @@
+import { resetUserPassword } from "./user.controller.js";
+// Đặt lại mật khẩu user
+router.post("/:id/reset-password", authMiddleware, resetUserPassword);
 import express from "express";
 import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { userRbacMiddleware } from "../../middlewares/user-rbac.middleware.js";
@@ -6,8 +9,7 @@ import {
     getUserById,
     createUser,
     updateUser,
-    deleteUser,
-    assignRoleToUser
+    deleteUser
 } from "./user.controller.js";
 
 const router = express.Router();
@@ -27,6 +29,6 @@ router.get("/:id", authMiddleware, userRbacMiddleware("read"), getUserById);
 router.post("/", authMiddleware, userRbacMiddleware("create"), createUser);
 router.put("/:id", authMiddleware, userRbacMiddleware("update"), updateUser);
 router.delete("/:id", authMiddleware, userRbacMiddleware("delete"), deleteUser);
-router.post("/assign-role", authMiddleware, userRbacMiddleware("update"), assignRoleToUser);
+// router.post("/assign-role", authMiddleware, userRbacMiddleware("update"), assignRoleToUser);
 
 export default router;

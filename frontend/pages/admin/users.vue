@@ -1,5 +1,6 @@
 <template>
     <div class="users-page">
+        <BaseToast ref="toastRef" />
         <div class="container">
             <h1 class="page-title">Quản lý người dùng</h1>
             <div class="page-actions">
@@ -9,16 +10,19 @@
             </div>
             <div class="page-filters">
                 <BaseSearchFilter v-model="search" @update:search="onSearchInput" />
-                <select class="filter-role" v-model="filterRole" @change="onFilterChange">
+                <label for="filterRole" hidden></label>
+                <select id="filterRole" class="filter-role" v-model="filterRole" @change="onFilterChange">
                     <option value="all">Tất cả vai trò</option>
                     <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
                 </select>
-                <select class="filter-active" v-model="filterActive" @change="onFilterChange">
+                <label for="filterActive" hidden></label>
+                <select id="filterActive" class="filter-active" v-model="filterActive" @change="onFilterChange">
                     <option value="all">Tất cả trạng thái</option>
                     <option value="true">Active</option>
                     <option value="false">Inactive</option>
                 </select>
-                <select class="filter-page-size" v-model="pageSize" @change="changePageSize">
+                <label for="pageSize" hidden></label>
+                <select id="pageSize" class="filter-page-size" v-model="pageSize" @change="changePageSize">
                     <option value="5">5 bản ghi/trang</option>
                     <option value="20">20 bản ghi/trang</option>
                     <option value="50">50 bản ghi/trang</option>
@@ -102,6 +106,9 @@
                     <th>Thao tác</th>
                 </template>
                 <template #table-body>
+                    <tr v-if="!users.length">
+                        <td :colspan="8" class="center">Không có bản ghi</td>
+                    </tr>
                     <tr v-for="user in users" :key="user.id">
                         <td class="center">{{ user.id }}</td>
                         <td>{{ user.username }}</td>
@@ -115,7 +122,8 @@
                         </td>
                         <td>
                             <template v-if="user.Roles && user.Roles.length">
-                                <span v-for="role in user.Roles" :key="role.id" :class="['role-badge', role.code]">{{ role.code
+                                <span v-for="role in user.Roles" :key="role.id" :class="['role-badge', role.code]">{{
+                                    role.code
                                     }}</span>
                             </template>
                         </td>
@@ -125,6 +133,8 @@
                                         class="fas fa-eye"></i></button>
                                 <button class="action-btn edit" @click="editUser(user)" title="Sửa"><i
                                         class="fas fa-edit"></i></button>
+                                <button class="action-btn reset" @click="" title="Đặt lại mật khẩu"><i
+                                        class="fas fa-key"></i></button>
                                 <button class="action-btn delete" v-if="hasPermission('user.delete')"
                                     @click="deleteUser(user.id)" title="Xóa"><i class="fas fa-trash"></i></button>
                             </div>
@@ -170,7 +180,8 @@
                         <div class="form-group">
                             <p class="detail-title">Roles:</p>
                             <template v-if="detailUser.Roles && detailUser.Roles.length">
-                                <span v-for="role in detailUser.Roles" :key="role.id" :class="['role-badge', role.code]">{{ role.code
+                                <span v-for="role in detailUser.Roles" :key="role.id"
+                                    :class="['role-badge', role.code]">{{ role.code
                                     }}</span>
                             </template>
                         </div>
@@ -185,35 +196,85 @@
             <div v-if="showAdd || editingUser" class="modal">
                 <div class="modal-content">
                     <h3>{{ editingUser ? 'Sửa người dùng' : 'Thêm người dùng' }}</h3>
-                    <form @submit.prevent="saveUser">
+                    <form class="create-form" @submit.prevent="saveUser">
                         <div class="form-group">
-                            <label for="username">Username:</label>
-                            <input v-model="form.username" placeholder="Username" required />
+                            <label for="username">Username: <span class="required">*</span></label>
+                            <input id="username" v-model="form.username" placeholder="Username" required
+                                :class="{ 'input-error': errors.username }" />
+                            <span v-if="errors.username" class="error-msg">{{ errors.username }}</span>
                         </div>
                         <div class="form-group">
-                            <label for="name">Họ tên:</label>
-                            <input v-model="form.name" placeholder="Họ tên" />
+                            <label for="name">Họ tên: <span class="required">*</span></label>
+                            <input id="name" v-model="form.name" placeholder="Họ tên" required
+                                :class="{ 'input-error': errors.name }" />
+                            <span v-if="errors.name" class="error-msg">{{ errors.name }}</span>
                         </div>
                         <div class="form-group">
-                            <label for="email">Email:</label>
-                            <input v-model="form.email" placeholder="Email" />
+                            <label for="email">Email: <span class="required">*</span></label>
+                            <input id="email" v-model="form.email" placeholder="Email" required
+                                :class="{ 'input-error': errors.email }" />
+                            <span v-if="errors.email" class="error-msg">{{ errors.email }}</span>
                         </div>
                         <div class="form-group">
                             <label for="phone">Điện thoại:</label>
-                            <input v-model="form.phone" placeholder="Điện thoại" />
+                            <input id="phone" v-model="form.phone" placeholder="Điện thoại"
+                                :class="{ 'input-error': errors.phone }" />
+                            <span v-if="errors.phone" class="error-msg">{{ errors.phone }}</span>
                         </div>
                         <div class="form-row">
 
                             <div class="form-group">
                                 <label for="is_active">Trạng thái:</label>
-                                <label><input type="checkbox" v-model="form.is_active" /> Active</label>
+                                <label><input id="is_active" type="checkbox" v-model="form.is_active" /> Active</label>
                             </div>
 
                             <div class="form-group">
-                                <label for="role_ids">Vai trò:</label>
-                                <select v-model="form.role_ids" multiple style="min-height: 90px">
-                                    <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}</option>
+                                <label for="role_ids">Vai trò: <span class="required">*</span></label>
+                                <select id="role_ids" v-model="form.role_ids" multiple style="min-height: 90px"
+                                    :class="{ 'input-error': errors.role_ids }">
+                                    <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}
+                                    </option>
                                 </select>
+                                <span v-if="errors.role_ids" class="error-msg">Bạn phải chọn ít nhất 1 vai trò</span>
+                            </div>
+                        </div>
+                        <div class="form-row" v-if="!editingUser">
+                            <div class="form-group">
+                                <label for="password">Mật khẩu: <span class="required">*</span></label>
+                                <input id="password" v-model="form.password" placeholder="Mật khẩu" type="password"
+                                    :class="{ 'input-error': errors.password }" />
+                                <span v-if="errors.password" class="error-msg">{{ errors.password }}</span>
+                            </div>
+                            <div class="form-group" v-if="!editingUser">
+                                <label for="passwordRepeat">Nhập lại mật khẩu: <span class="required">*</span></label>
+                                <input id="passwordRepeat" v-model="form.passwordRepeat" placeholder="Nhập lại mật khẩu"
+                                    type="password" :class="{ 'input-error': errors.passwordRepeat }" />
+                                <span v-if="errors.passwordRepeat" class="error-msg">{{ errors.passwordRepeat }}</span>
+                            </div>
+                            <div class="form-rules">
+                                <p class="rules-title">Mật khẩu phải:</p>
+                                <ul class="rules-list">
+                                    <li :class="{ pass: passwordRules.length }">
+                                        <i
+                                            :class="passwordRules.length ? 'fas fa-check-circle pass' : 'fas fa-times-circle fail'"></i>
+                                        Ít nhất 8 ký tự
+                                    </li>
+                                    <li :class="{ pass: passwordRules.upper }">
+                                        <i
+                                            :class="passwordRules.upper ? 'fas fa-check-circle pass' : 'fas fa-times-circle fail'"></i>
+                                        Chứa chữ hoa
+                                    </li>
+                                    <li :class="{ pass: passwordRules.lower }">
+                                        <i
+                                            :class="passwordRules.lower ? 'fas fa-check-circle pass' : 'fas fa-times-circle fail'"></i>
+                                        Chứa chữ thường
+                                    </li>
+                                    <li :class="{ pass: passwordRules.digit }">
+                                        <i
+                                            :class="passwordRules.digit ? 'fas fa-check-circle pass' : 'fas fa-times-circle fail'"></i>
+                                        Chứa số
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                         <div class="modal-actions">
@@ -230,8 +291,22 @@
     </div>
 </template>
 <script setup>
+const errors = ref({})
+import { computed } from 'vue'
+// Realtime password rules check
+const passwordRules = computed(() => {
+    const pw = form.value.password || ''
+    return {
+        length: pw.length >= 8,
+        lower: /[a-z]/.test(pw),
+        upper: /[A-Z]/.test(pw),
+        digit: /\d/.test(pw)
+    }
+})
 
 import { ref, onMounted, watch } from 'vue'
+import BaseToast from '~/components/admin/base/BaseToast.vue'
+import { validateUser, validateUsername, validateName, validateEmail, validatePhone, validatePassword } from '~/utils/fieldValidation.js'
 import { usePermissionGuard } from '~/composables/usePermissionGuard'
 import { useCookie } from '#imports'
 import BaseTable from '~/components/admin/base/BaseTable.vue'
@@ -239,12 +314,13 @@ import BasePagination from '~/components/admin/base/BasePagination.vue'
 import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
 
 const users = ref([])
+const toastRef = ref()
 const roles = ref([])
 const showAdd = ref(false)
 const showDetail = ref(false)
 const detailUser = ref(null)
 const editingUser = ref(null)
-const form = ref({ username: '', name: '', email: '', phone: '', password: '', is_active: true, role_ids: [] })
+const form = ref({ username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] })
 const search = ref('')
 const filterRole = ref('all')
 const filterActive = ref('all')
@@ -309,24 +385,57 @@ function editUser(user) {
     editingUser.value = user
     // Lấy tất cả role_ids nếu có
     const role_ids = user.Roles && user.Roles.length ? user.Roles.map(r => r.id) : []
-    form.value = { ...user, password: '', role_ids }
+    form.value = { ...user, password: '', passwordRepeat: '', role_ids }
+    errors.value = {}
 }
 function closeModal() {
     showAdd.value = false
     editingUser.value = null
-    form.value = { username: '', name: '', email: '', phone: '', password: '', is_active: true, role_ids: [] }
+    form.value = { username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] }
+    errors.value = {}
 }
 async function saveUser() {
     const payload = { ...form.value };
+    // Validate phía client
+    const newErrors = validateUser(payload, !!editingUser.value);
+    if (!editingUser.value && payload.password !== payload.passwordRepeat) {
+        newErrors.passwordRepeat = 'PASSWORD_REPEAT_MISMATCH';
+    }
+    if (!payload.role_ids || !Array.isArray(payload.role_ids) || payload.role_ids.length === 0) {
+        newErrors.role_ids = 'ROLE_REQUIRED';
+    }
+    errors.value = newErrors;
+    if (Object.keys(newErrors).length > 0) {
+        return;
+    }
+    // Xóa trường passwordRepeat trước khi gửi
+    delete payload.passwordRepeat;
+    // Nếu là sửa user thì không gửi trường password
+    if (editingUser.value) {
+        delete payload.password;
+    }
     // Đảm bảo role_ids là mảng số
     if (payload.role_ids) payload.role_ids = payload.role_ids.map(Number);
-    if (editingUser.value) {
-        await $fetch(`/api/users/${editingUser.value.id}`, { method: 'PUT', body: payload, credentials: 'include' })
-    } else {
-        await $fetch('/api/users', { method: 'POST', body: payload, credentials: 'include' })
+    console.log('Payload gửi lên server:', payload);
+    try {
+        if (editingUser.value) {
+            await $fetch(`/api/users/${editingUser.value.id}`, { method: 'PUT', body: payload, credentials: 'include' })
+            toastRef.value?.open('Cập nhật người dùng thành công!', 'success')
+        } else {
+            await $fetch('/api/users', { method: 'POST', body: payload, credentials: 'include' })
+            toastRef.value?.open('Thêm người dùng thành công!', 'success')
+        }
+        closeModal()
+        fetchUsers()
+    } catch (err) {
+        let msg = 'Đã có lỗi xảy ra.'
+        if (err?.data?.message === 'USERNAME_EXISTS') msg = 'Tên đăng nhập đã tồn tại!'
+        else if (err?.data?.message === 'EMAIL_EXISTS') msg = 'Email đã tồn tại!'
+        else if (err?.data?.message === 'USER_VALIDATION_FAILED') msg = 'Dữ liệu không hợp lệ!'
+        else if (err?.data?.message === 'ASSIGN_ROLE_FAILED') msg = 'Gán vai trò thất bại!'
+        else if (err?.data?.message === 'USER_CREATE_FAILED') msg = 'Tạo người dùng thất bại!'
+        toastRef.value?.open(msg, 'error')
     }
-    closeModal()
-    fetchUsers()
 }
 async function deleteUser(id) {
     if (confirm('Xóa user này?')) {
@@ -380,8 +489,6 @@ definePageMeta({
 </script>
 
 <style scoped>
-.users-page {}
-
 .user-table {
     width: 100%;
     border-collapse: collapse;
@@ -430,90 +537,6 @@ definePageMeta({
 .filter-page-size:focus {
     border-color: #888;
     outline: none;
-}
-
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-}
-
-.modal-content {
-    background: #fff;
-    padding: 20px;
-    border-radius: 8px;
-    min-width: 600px;
-}
-
-.modal-content h3 {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-/* Container form (nếu nằm trong modal/card) */
-form,
-.detail-content {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-/* Group */
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Label */
-.form-group>label:first-child,
-.detail-title {
-    font-size: 14px;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #333;
-}
-
-/* Input + Select */
-.form-group input,
-.form-group select,
-.detail-info {
-    padding: 10px 12px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    outline: none;
-    font-size: 14px;
-    line-height: 20px;
-    transition: all 0.2s ease;
-}
-
-/* Focus */
-.form-group input:focus,
-.form-group select:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
-
-/* Checkbox group */
-.form-group label input[type="checkbox"] {
-    margin-right: 6px;
-}
-
-/* Row (2 cột) */
-.form-row {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-}
-
-.form-row .form-group {
-    flex: 1 1 200px;
 }
 
 .role-badge {
@@ -579,6 +602,19 @@ form,
 .detail-row {
     margin-bottom: 8px;
     font-size: 1.05em;
+}
+
+/* Inline error style */
+.input-error {
+    border-color: #d32f2f !important;
+    background: #fff6f6;
+}
+
+.error-msg {
+    color: #d32f2f;
+    font-size: 13px;
+    margin-top: 2px;
+    margin-bottom: 2px;
 }
 
 @media (max-width: 768px) {
