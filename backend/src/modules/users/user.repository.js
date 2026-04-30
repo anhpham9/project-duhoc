@@ -48,25 +48,18 @@ export const searchUsersWithFilters = async ({ search = "", role, active, sort_b
         order = [[{ model: Role }, "code", sort_dir.toLowerCase() === "desc" ? "DESC" : "ASC"]];
     }
 
-    // Pagination
-    let limit, offset;
-    if (page_size !== 'all') {
-        limit = page_size;
-        offset = (page - 1) * page_size;
-    }
+    // Không phân trang ở repo, luôn trả về toàn bộ danh sách đã filter
+    const users = await User.findAll({ where, include, order });
 
-    // Đếm tổng số bản ghi
-    const total = await User.count({ where, include });
-    // Lấy dữ liệu trang
-    const users = await User.findAll({ where, include, order, ...(limit ? { limit, offset } : {}) });
-    // Thêm trường created_by_name vào kết quả trả về
+    // thêm trường created_by_name vào kết quả trả về, lấy từ quan hệ self join
     const usersWithCreator = users.map(u => {
         const userObj = u.toJSON();
         userObj.created_by_name = userObj.creator ? userObj.creator.name : null;
         delete userObj.creator;
         return userObj;
     });
-    return { users: usersWithCreator, total };
+
+    return { users: usersWithCreator };
 };
 
 export const findUserByUsername = async (username) => {

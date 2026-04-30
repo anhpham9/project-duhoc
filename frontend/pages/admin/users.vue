@@ -4,7 +4,7 @@
         <div class="container">
             <h1 class="page-title">Quản lý người dùng</h1>
             <div class="page-actions">
-                <button class="btn btn-success">Xuất file excel</button>
+                <button class="btn btn-success" @click="exportUsersExcel">Xuất file excel</button>
                 <button class="btn btn-primary" v-if="hasPermission('user.create')" @click="showAdd = true">Thêm người
                     dùng</button>
 
@@ -125,7 +125,7 @@
                             <template v-if="user.Roles && user.Roles.length">
                                 <span v-for="role in user.Roles" :key="role.id" :class="['role-badge', role.code]">{{
                                     role.code
-                                    }}</span>
+                                }}</span>
                             </template>
                         </td>
                         <td>
@@ -194,7 +194,8 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <p class="detail-title">Được tạo bởi:</p>
-                                <p class="detail-info">{{ detailUser.created_by_name || detailUser.created_by || 'N/A' }}</p>
+                                <p class="detail-info">{{ detailUser.created_by_name || detailUser.created_by || 'N/A'
+                                    }}</p>
                             </div>
 
                             <div class="form-group">
@@ -242,7 +243,9 @@
 
                             <div class="form-group">
                                 <label for="is_active">Trạng thái:</label>
-                                <label class="inline-label"><input id="is_active" type="checkbox" v-model="form.is_active" /> Active</label>
+                                <label class="inline-label"><input id="is_active" type="checkbox"
+                                        v-model="form.is_active" />
+                                    Active</label>
                             </div>
 
                             <div class="form-group">
@@ -250,7 +253,7 @@
                                 <select id="role_ids" v-model="form.role_ids" multiple style="min-height: 90px"
                                     :class="{ 'input-error': errors.role_ids }">
                                     <option v-for="role in filteredRoles" :key="role.id" :value="role.id">{{ role.code
-                                        }}
+                                    }}
                                     </option>
                                 </select>
                                 <span v-if="errors.role_ids" class="error-msg">Bạn phải chọn ít nhất 1 vai trò</span>
@@ -371,20 +374,21 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import BaseToast from '~/components/admin/base/BaseToast.vue'
-import { validateUser, validateUsername, validateName, validateEmail, validatePhone, validatePassword } from '~/utils/fieldValidation.js'
+import { validateUser } from '~/utils/fieldValidation.js'
 import { usePermissionGuard } from '~/composables/usePermissionGuard'
 import { useCookie } from '#imports'
 import BaseTable from '~/components/admin/base/BaseTable.vue'
 import BasePagination from '~/components/admin/base/BasePagination.vue'
 import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
-import { formatSmartDate, formatDate } from '~/utils/date'
+import { formatDate } from '~/utils/date'
+import { exportExcel } from '~/utils/exportExcel'
 
-
+// --- State ---
+const currentUser = useCookie('currentUser')
 const users = ref([])
+const usersToExcel = ref([])
 const toastRef = ref()
 const roles = ref([])
-const showAdd = ref(false)
-const showDetail = ref(false)
 const detailUser = ref(null)
 const editingUser = ref(null)
 const form = ref({ username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] })
@@ -396,75 +400,31 @@ const sortDir = ref('asc')
 const pageSize = ref('5')
 const page = ref(1)
 const total = ref(0)
-const currentUser = useCookie('currentUser')
 const { hasPermission: baseHasPermission } = usePermissionGuard(currentUser)
 
-// Superadmin luôn có quyền
-function hasPermission(permission) {
-    if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
-        if (currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
-    }
+const errors = ref({})
+// Map priority cho từng role trong user.Roles
+const priorityMap = {
+    superadmin: 1,
+    admin: 2,
+    manager: 3,
+    editor: 4,
+    consultant: 5
+};
 
-    return baseHasPermission(permission);
-}
+// Export to Excel composable
+const { exportToExcel, exportingExcel } = exportExcel()
 
+// --- UI control ---
+const showAdd = ref(false)
+const showDetail = ref(false)
 const showResetPassword = ref(false)
 const resetUser = ref(null)
 const resetResult = ref("")
 const resetLoading = ref(false)
 
-const errors = ref({})
 
-// --- RBAC helpers ---
-
-function getHighestRole(rolesArr) {
-    if (!rolesArr || !rolesArr.length) return null;
-    // Lower priority value = higher privilege
-    const highest = rolesArr.reduce((prev, curr) => (prev.priority < curr.priority ? prev : curr));
-    // Debug log
-    // eslint-disable-next-line no-console
-    // console.log('[getHighestRole] rolesArr:', rolesArr, '=> highest:', highest);
-    return highest;
-}
-
-function getCurrentUserHighestRole() {
-    if (!currentUser.value || !currentUser.value.Roles) return null;
-    const highest = getHighestRole(currentUser.value.Roles);
-    // Debug log
-    // eslint-disable-next-line no-console
-    // console.log('[getCurrentUserHighestRole] currentUser:', currentUser.value, '=> highest:', highest);
-    return highest;
-}
-
-function canEditUser(user) {
-    if (!user || !currentUser.value) return false;
-    if (user.id === currentUser.value.id) return false;
-    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
-    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
-    const myRole = getCurrentUserHighestRole();
-    const targetRole = getHighestRole(user.Roles);
-    if (!myRole || !targetRole) return false;
-    return myRole.priority < targetRole.priority;
-}
-
-function canResetPassword(user) {
-    // Debug log
-    // eslint-disable-next-line no-console
-    // console.log('[canResetPassword] user:', user);
-    return canEditUser(user);
-}
-
-function canDeleteUser(user) {
-    if (!user || !currentUser.value) return false;
-    if (user.id === currentUser.value.id) return false;
-    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
-    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
-    const myRole = getCurrentUserHighestRole();
-    const targetRole = getHighestRole(user.Roles);
-    if (!myRole || !targetRole) return false;
-    return myRole.priority < targetRole.priority;
-}
-
+// --- Computed ---
 // --- Filtered roles for dropdown (chỉ cho phép gán role thấp hơn mình) ---
 const filteredRoles = computed(() => {
     const myRole = getCurrentUserHighestRole();
@@ -486,6 +446,55 @@ const passwordRules = computed(() => {
     }
 })
 
+// --- RBAC helpers ---
+// Superadmin luôn có quyền
+function hasPermission(permission) {
+    if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
+        if (currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    }
+    return baseHasPermission(permission);
+}
+
+function getHighestRole(rolesArr) {
+    if (!rolesArr || !rolesArr.length) return null;
+    // Lower priority value = higher privilege
+    const highest = rolesArr.reduce((prev, curr) => (prev.priority < curr.priority ? prev : curr));
+    return highest;
+}
+
+function getCurrentUserHighestRole() {
+    if (!currentUser.value || !currentUser.value.Roles) return null;
+    const highest = getHighestRole(currentUser.value.Roles);
+    return highest;
+}
+
+function canEditUser(user) {
+    if (!user || !currentUser.value) return false;
+    if (user.id === currentUser.value.id) return false;
+    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
+    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    const myRole = getCurrentUserHighestRole();
+    const targetRole = getHighestRole(user.Roles);
+    if (!myRole || !targetRole) return false;
+    return myRole.priority < targetRole.priority;
+}
+
+function canResetPassword(user) {
+    return canEditUser(user);
+}
+
+function canDeleteUser(user) {
+    if (!user || !currentUser.value) return false;
+    if (user.id === currentUser.value.id) return false;
+    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
+    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    const myRole = getCurrentUserHighestRole();
+    const targetRole = getHighestRole(user.Roles);
+    if (!myRole || !targetRole) return false;
+    return myRole.priority < targetRole.priority;
+}
+
+// --- Fetch/Export ---
 async function fetchUsers() {
     const params = {
         search: search.value,
@@ -509,14 +518,6 @@ async function fetchUsers() {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
     })
-    // Map priority cho từng role trong user.Roles
-    const priorityMap = {
-        superadmin: 1,
-        admin: 2,
-        manager: 3,
-        editor: 4,
-        consultant: 5
-    };
     // Map priority cho từng role trong user.Roles (nếu cần)
     users.value = res.users.map(u => ({
         ...u,
@@ -530,14 +531,7 @@ async function fetchUsers() {
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
-    // Map priority nếu chưa có
-    const priorityMap = {
-        superadmin: 1,
-        admin: 2,
-        manager: 3,
-        editor: 4,
-        consultant: 5
-    };
+    
     roles.value = res.roles.map(r => ({
         ...r,
         priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
@@ -553,24 +547,62 @@ async function fetchRoles() {
         });
     }
 }
-function toggleSort(col) {
-    if (sortBy.value === col) {
-        sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
-    } else {
-        sortBy.value = col
-        sortDir.value = 'asc'
+
+async function exportUsersExcel() {
+    const params = {
+        search: search.value,
+        role: filterRole.value,
+        active: filterActive.value,
+        sort_by: sortBy.value,
+        sort_dir: sortDir.value
     }
-    fetchUsers()
+    if (!params.search) delete params.search
+    if (params.role === 'all') delete params.role
+    if (params.active === 'all') delete params.active
+    if (params.sort_by === 'id' && params.sort_dir === 'asc') {
+        delete params.sort_by
+        delete params.sort_dir
+    }
+    const query = new URLSearchParams(params).toString()
+    const res = await $fetch(`/api/users/exportToExcel${query ? '?' + query : ''}`, {
+        credentials: 'include',
+        headers: { 'Cache-Control': 'no-cache' }
+    })
+
+    usersToExcel.value = res.users
+
+    exportToExcel({
+        data: usersToExcel.value,
+        columns: [
+            { label: 'STT', key: 'id', value: (_row, idx) => idx + 1, width: 5 },
+            { label: 'ID', key: 'id', width: 8 },
+            { label: 'Họ và tên', key: 'name', width: 25 },
+            { label: 'Tên đăng nhập', key: 'username', width: 20 },
+            { label: 'Email', key: 'email', width: 30 },
+            { label: 'Số điện thoại', key: 'phone', value: row => row.phone || '', width: 15 },
+            { label: 'Quyền', key: 'Roles', value: row => (row.Roles && row.Roles.length ? row.Roles.map(r => r.code).join(', ') : ''), width: 15 },
+            { label: 'Trạng thái', key: 'is_active', value: row => row.is_active ? 'Hoạt động' : 'Tạm khóa', width: 12 },
+            { label: 'Ngày tạo', key: 'created_at', value: row => formatDate(row.created_at), width: 12 },
+            { label: 'Người tạo', key: 'created_by', value: row => row.created_by_name || row.created_by || '', width: 12 },
+            { label: 'Ngày cập nhật', key: 'updated_at', value: row => formatDate(row.updated_at), width: 12 }
+        ],
+        filenamePrefix: 'danh-sach-nguoi-dung',
+        onSuccess: msg => toastRef.value?.open(msg, 'success'),
+        onError: msg => toastRef.value?.open(msg, 'error')
+    })
 }
-function resetFilters() {
-    search.value = ''
-    filterRole.value = 'all'
-    filterActive.value = 'all'
-    sortBy.value = 'id'
-    sortDir.value = 'asc'
-    // Không reset page, pageSize khi xóa bộ lọc
-    fetchUsers()
+
+// --- Form/Modal ---
+function viewUser(user) {
+    detailUser.value = user
+    showDetail.value = true
 }
+
+function closeDetail() {
+    showDetail.value = false
+    detailUser.value = null
+}
+
 function editUser(user) {
     editingUser.value = user
     // Lấy tất cả role_ids nếu có
@@ -578,12 +610,27 @@ function editUser(user) {
     form.value = { ...user, password: '', passwordRepeat: '', role_ids }
     errors.value = {}
 }
+
 function closeModal() {
     showAdd.value = false
     editingUser.value = null
     form.value = { username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] }
     errors.value = {}
 }
+
+function openResetPasswordModal(user) {
+    resetUser.value = user
+    showResetPassword.value = true
+    resetResult.value = ""
+}
+
+function closeResetPasswordModal() {
+    showResetPassword.value = false
+    resetUser.value = null
+    resetResult.value = ""
+}
+
+// --- User actions ---
 async function saveUser() {
     const payload = { ...form.value };
     // Validate phía client
@@ -632,32 +679,7 @@ async function saveUser() {
         toastRef.value?.open(msg, 'error')
     }
 }
-async function deleteUser(id) {
-    if (confirm('Xóa user này?')) {
-        await $fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
-        fetchUsers()
-    }
-}
 
-function viewUser(user) {
-    detailUser.value = user
-    showDetail.value = true
-}
-function closeDetail() {
-    showDetail.value = false
-    detailUser.value = null
-}
-
-function openResetPasswordModal(user) {
-    resetUser.value = user
-    showResetPassword.value = true
-    resetResult.value = ""
-}
-function closeResetPasswordModal() {
-    showResetPassword.value = false
-    resetUser.value = null
-    resetResult.value = ""
-}
 async function resetPassword() {
     if (!resetUser.value) return
     resetLoading.value = true
@@ -672,16 +694,21 @@ async function resetPassword() {
         resetLoading.value = false
     }
 }
+
 function copyPassword() {
     if (!resetResult.value) return
     navigator.clipboard.writeText(resetResult.value)
     toastRef.value?.open('Đã copy mật khẩu mới!', 'success')
 }
 
-function changePageSize() {
-    page.value = 1
-    fetchUsers()
+async function deleteUser(id) {
+    if (confirm('Xóa user này?')) {
+        await $fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
+        fetchUsers()
+    }
 }
+
+// --- Filter/Sort/Pagination ---
 let searchTimeout = null;
 function onSearchInput() {
     page.value = 1;
@@ -690,18 +717,48 @@ function onSearchInput() {
         fetchUsers();
     }, 400); // debounce 400ms
 }
+
 function onFilterChange() {
     page.value = 1;
     fetchUsers();
 }
+
+function changePageSize() {
+    page.value = 1
+    fetchUsers()
+}
+
+function toggleSort(col) {
+    if (sortBy.value === col) {
+        sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    } else {
+        sortBy.value = col
+        sortDir.value = 'asc'
+    }
+    fetchUsers()
+}
+
+function resetFilters() {
+    search.value = ''
+    filterRole.value = 'all'
+    filterActive.value = 'all'
+    sortBy.value = 'id'
+    sortDir.value = 'asc'
+    // Không reset page, pageSize khi xóa bộ lọc
+    fetchUsers()
+}
+
+// --- Lifecycle ---
 onMounted(() => {
     fetchRoles()
     fetchUsers()
 })
+
 // Khi chuyển trang, fetch lại dữ liệu
 watch(page, () => {
     fetchUsers()
 })
+
 definePageMeta({
     layout: "admin",
     middleware: 'auth',

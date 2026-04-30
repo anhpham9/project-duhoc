@@ -4,6 +4,7 @@ import { authMiddleware } from "../../middlewares/auth.middleware.js";
 import { userRbacMiddleware } from "../../middlewares/user-rbac.middleware.js";
 import {
     getAllUsers,
+    getAllUsersWithPagination,
     getUserById,
     createUser,
     updateUser,
@@ -22,7 +23,8 @@ const canListUsers = async (req, res, next) => {
     return res.status(403).json({ message: "Forbidden" });
 };
 
-router.get("/", authMiddleware, canListUsers, getAllUsers);
+router.get("/", authMiddleware, canListUsers, getAllUsersWithPagination);
+router.get("/exportToExcel", authMiddleware, canListUsers, getAllUsers);
 router.get("/:id", authMiddleware, userRbacMiddleware("read"), getUserById);
 router.post("/", authMiddleware, userRbacMiddleware("create"), createUser);
 router.put("/:id", authMiddleware, userRbacMiddleware("update"), updateUser);

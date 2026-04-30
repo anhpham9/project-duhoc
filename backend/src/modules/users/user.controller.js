@@ -30,15 +30,15 @@ export function getHighestRole(user) {
 }
 
 // Lấy danh sách user có hỗ trợ tìm kiếm, lọc, sắp xếp
-export const getAllUsers = async (req, res) => {
+
+// Helper: Lấy danh sách users đã lọc (không phân trang)
+async function getFilteredUsers(req) {
     const {
         search = "",
         role,
         active,
         sort_by = "id",
-        sort_dir = "asc",
-        page = 1,
-        page_size = 20
+        sort_dir = "asc"
     } = req.query;
 
     // Lọc theo quyền: chỉ thấy user có role thấp hơn hoặc bằng mình (trừ superadmin)
@@ -55,10 +55,7 @@ export const getAllUsers = async (req, res) => {
         role,
         active,
         sort_by,
-        sort_dir,
-        page: 1,
-        page_size: 'all',
-        allowedRolePriority: null // Không lọc RBAC ở repo
+        sort_dir
     });
 
     // Lọc RBAC ở đây
@@ -72,8 +69,17 @@ export const getAllUsers = async (req, res) => {
             return rolePriority(highest) <= allowedRolePriority;
         });
     }
+    return filteredUsers;
+}
 
-    // Sau khi lọc, phân trang thủ công
+export const getAllUsers = async (req, res) => {
+    const filteredUsers = await getFilteredUsers(req);
+    res.json({ users: filteredUsers, total: filteredUsers.length });
+};
+
+export const getAllUsersWithPagination = async (req, res) => {
+    const { page = 1, page_size = 20 } = req.query;
+    const filteredUsers = await getFilteredUsers(req);
     let pagedUsers = filteredUsers;
     let totalFiltered = filteredUsers.length;
     let pageNum = Number(page);
