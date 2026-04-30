@@ -33,6 +33,7 @@ const run = async () => {
                 ('user.manage', 'Manage users'),
                 ('user.create', 'Create users'),
                 ('user.update', 'Update users'),
+                ('user.reset_password', 'Reset users password'),
                 ('user.delete', 'Delete users'),
 
                 -- Settings

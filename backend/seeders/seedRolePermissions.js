@@ -28,6 +28,7 @@ const run = async () => {
             [roleMap.admin, permMap["user.manage"]],
             [roleMap.admin, permMap["user.create"]],
             [roleMap.admin, permMap["user.update"]],
+            [roleMap.admin, permMap["user.reset_password"]],
             [roleMap.admin, permMap["user.delete"]],
             [roleMap.admin, permMap["settings.update"]],
             [roleMap.admin, permMap["faqs.manage"]],

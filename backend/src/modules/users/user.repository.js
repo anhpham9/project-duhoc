@@ -63,6 +63,10 @@ export const findUserByEmail = async (email) => {
     return User.findOne({ where: { email } });
 }
 
+export const getAllRoles = async () => {
+    return Role.findAll();
+};
+
 export const getAllUsers = async () => {
     return User.findAll();
 };
@@ -106,7 +110,7 @@ export const getUserWithRolesAndPermissions = async (userId) => {
                 attributes: ["code"],
                 through: { attributes: [] },
             },
-            attributes: ["id"],
+            attributes: ["id", "code", "description"],
             through: { attributes: [] },
         },
     });

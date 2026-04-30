@@ -5,6 +5,30 @@ import { logAudit } from "../../utils/auditLogger.js";
 import { logActivity } from "../../utils/activityLogger.js";
 import { validateUser, validateUpdateUser } from "./user.validation.js";
 
+// RBAC helpers (dùng chung cho nhiều API)
+export const rolePriority = role => {
+    if (!role) return 0;
+    if (role.code === 'superadmin') return 100;
+    if (role.code === 'admin') return 90;
+    if (role.code === 'manager') return 80;
+    if (role.code === 'editor') return 70;
+    if (role.code === 'consultant') return 60;
+    return 0;
+};
+
+export function getHighestRole(user) {
+    if (!user || !user.Roles || !user.Roles.length) return null;
+    // Lấy role có priority lớn nhất (quyền cao nhất: số lớn nhất)
+    const getRoleCode = r => r.code || (r.dataValues && r.dataValues.code);
+    const getRoleObj = r => ({
+        ...((r.dataValues) ? r.dataValues : r),
+        code: getRoleCode(r)
+    });
+    return user.Roles
+        .map(getRoleObj)
+        .reduce((max, r) => rolePriority(r) > rolePriority(max) ? r : max, getRoleObj(user.Roles[0]));
+}
+
 // Lấy danh sách user có hỗ trợ tìm kiếm, lọc, sắp xếp
 export const getAllUsers = async (req, res) => {
     const {
@@ -26,6 +50,10 @@ export const getAllUsers = async (req, res) => {
         page: Number(page),
         page_size: page_size === 'all' ? 'all' : Number(page_size)
     });
+
+    const logData = await userRepo.getAllUsers();
+    console.log("getAllUsers with filters", { search, role, active, sort_by, sort_dir, page, page_size }, "result count", users.length);
+    console.log("Full user list for logging:", logData.length);
     res.json({ users, total });
 };
 
@@ -108,6 +136,35 @@ export const updateUser = async (req, res) => {
     delete data.updated_at;
     delete data.Roles;
 
+    // console.log("Received updateUser request for userId", userId, "with data", data, "and role_ids", role_ids);
+    // Lấy role cao nhất của currentUser và user target
+    const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
+    const targetUser = await userRepo.getUserWithRolesAndPermissions(userId);
+
+    // console.log("Current user roles", currentUser.Roles);
+    const myRole = getHighestRole(currentUser);
+    const targetRole = getHighestRole(targetUser);
+
+    // console.log("myRole", myRole?.code, "targetRole", targetRole?.code, "role_ids", role_ids);
+
+    // Chỉ cấm thao tác nếu KHÔNG phải superadmin
+    if (myRole?.code !== 'superadmin') {
+        // Cấm thao tác với user có role >= mình
+        if (rolePriority(targetRole) >= rolePriority(myRole)) {
+            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+        }
+        // Cấm gán role superadmin cho user khác
+        if (Array.isArray(role_ids)) {
+            // Lấy danh sách role từ DB để kiểm tra code
+            const allRoles = await userRepo.getAllRoles();
+            const assignedRoles = allRoles.filter(r => role_ids.includes(r.id));
+            if (assignedRoles.some(r => r.code === 'superadmin')) {
+                return res.status(403).json({ message: "FORBIDDEN_ASSIGN_SUPERADMIN" });
+            }
+        }
+    }
+
+    // console.log("myRole", myRole?.code, "targetRole", targetRole?.code, "role_ids", role_ids);
     // Validate fields
     const errors = validateUpdateUser(data);
     if (Object.keys(errors).length > 0) {
@@ -128,9 +185,7 @@ export const updateUser = async (req, res) => {
     }
     // Update user
     try {
-        // console.log("Updating user in DB", { userId, data });
         await userRepo.updateUser(userId, data);
-        // console.log("Updating user roles in DB", { userId, role_ids });
         await userRepo.assignRolesToUser(userId, role_ids);
     } catch (err) {
         return res.status(500).json({ message: "USER_UPDATE_FAILED" });
@@ -198,21 +253,29 @@ function generateRandomPassword(length = 12) {
 // API: Reset mật khẩu user
 export const resetUserPassword = async (req, res) => {
     const userId = req.params.id;
-    const user = await userRepo.getUserById(userId);
-    if (!user) return res.status(404).json({ message: "USER_NOT_FOUND" });
+    const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
+    const targetUser = await userRepo.getUserWithRolesAndPermissions(userId);
+    if (!targetUser) return res.status(404).json({ message: "USER_NOT_FOUND" });
+    const myRole = getHighestRole(currentUser);
+    const targetRole = getHighestRole(targetUser);
+    // Superadmin có toàn quyền, các role khác bị giới hạn
+    if (myRole?.code !== 'superadmin') {
+        if (rolePriority(targetRole) >= rolePriority(myRole)) {
+            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+        }
+    }
     const newPassword = generateRandomPassword(12);
-    // Hash password nếu cần (giả sử userRepo.updateUser sẽ hash nếu cần)
     await userRepo.updateUser(userId, { password: newPassword });
     // Gửi notification cho user
     await sendNotification({
-        user_id: user.id,
+        user_id: targetUser.id,
         type: "user",
         action: "reset_password",
         title: "USER_PASSWORD_RESET",
         message: "USER_PASSWORD_RESET_BY_ADMIN",
         entity_type: "user",
-        entity_id: user.id,
-        data: { reset_by: req.user.id, username: user.username, password:newPassword },
+        entity_id: targetUser.id,
+        data: { reset_by: req.user.id, username: targetUser.username, password: newPassword },
     });
     // Ghi log mật khẩu mới (sau này sẽ gửi email)
     await logAudit({
@@ -220,7 +283,7 @@ export const resetUserPassword = async (req, res) => {
         action: "reset_password",
         entity_type: "user",
         entity_id: userId,
-        data: { username: user.username, password: newPassword },
+        data: { username: targetUser.username, password: newPassword },
         ip_address: req.ip,
         user_agent: req.headers["user-agent"]
     });

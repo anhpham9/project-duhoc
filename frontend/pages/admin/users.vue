@@ -5,7 +5,8 @@
             <h1 class="page-title">Quản lý người dùng</h1>
             <div class="page-actions">
                 <button class="btn btn-success">Xuất file excel</button>
-                <button class="btn btn-primary" @click="showAdd = true">Thêm người dùng</button>
+                <button class="btn btn-primary" v-if="hasPermission('user.create')" @click="showAdd = true">Thêm người
+                    dùng</button>
 
             </div>
             <div class="page-filters">
@@ -124,18 +125,21 @@
                             <template v-if="user.Roles && user.Roles.length">
                                 <span v-for="role in user.Roles" :key="role.id" :class="['role-badge', role.code]">{{
                                     role.code
-                                }}</span>
+                                    }}</span>
                             </template>
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <button class="action-btn view" @click="viewUser(user)" title="Xem chi tiết"><i
-                                        class="fas fa-eye"></i></button>
-                                <button class="action-btn edit" @click="editUser(user)" title="Sửa"><i
-                                        class="fas fa-edit"></i></button>
-                                <button class="action-btn reset" @click="openResetPasswordModal(user)"
-                                    title="Đặt lại mật khẩu"><i class="fas fa-key"></i></button>
-                                <button class="action-btn delete" v-if="hasPermission('user.delete')"
+                                <button class="action-btn view" v-if="hasPermission('user.manage')"
+                                    @click="viewUser(user)" title="Xem chi tiết"><i class="fas fa-eye"></i></button>
+                                <button class="action-btn edit" v-if="hasPermission('user.update') && canEditUser(user)"
+                                    @click="editUser(user)" title="Sửa"><i class="fas fa-edit"></i></button>
+                                <button class="action-btn reset"
+                                    v-if="hasPermission('user.reset_password') && canResetPassword(user)"
+                                    @click="openResetPasswordModal(user)" title="Đặt lại mật khẩu"><i
+                                        class="fas fa-key"></i></button>
+                                <button class="action-btn delete"
+                                    v-if="hasPermission('user.delete') && canDeleteUser(user)"
                                     @click="deleteUser(user.id)" title="Xóa"><i class="fas fa-trash"></i></button>
                             </div>
                         </td>
@@ -232,7 +236,8 @@
                                 <label for="role_ids">Vai trò: <span class="required">*</span></label>
                                 <select id="role_ids" v-model="form.role_ids" multiple style="min-height: 90px"
                                     :class="{ 'input-error': errors.role_ids }">
-                                    <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.code }}
+                                    <option v-for="role in filteredRoles" :key="role.id" :value="role.id">{{ role.code
+                                        }}
                                     </option>
                                 </select>
                                 <span v-if="errors.role_ids" class="error-msg">Bạn phải chọn ít nhất 1 vai trò</span>
@@ -360,6 +365,7 @@ import BaseTable from '~/components/admin/base/BaseTable.vue'
 import BasePagination from '~/components/admin/base/BasePagination.vue'
 import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
 
+
 const users = ref([])
 const toastRef = ref()
 const roles = ref([])
@@ -377,7 +383,16 @@ const pageSize = ref('5')
 const page = ref(1)
 const total = ref(0)
 const currentUser = useCookie('currentUser')
-const { hasPermission } = usePermissionGuard(currentUser)
+const { hasPermission: baseHasPermission } = usePermissionGuard(currentUser)
+
+// Superadmin luôn có quyền
+function hasPermission(permission) {
+    if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
+        if (currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    }
+
+    return baseHasPermission(permission);
+}
 
 const showResetPassword = ref(false)
 const resetUser = ref(null)
@@ -385,6 +400,66 @@ const resetResult = ref("")
 const resetLoading = ref(false)
 
 const errors = ref({})
+
+// --- RBAC helpers ---
+
+function getHighestRole(rolesArr) {
+    if (!rolesArr || !rolesArr.length) return null;
+    // Lower priority value = higher privilege
+    const highest = rolesArr.reduce((prev, curr) => (prev.priority < curr.priority ? prev : curr));
+    // Debug log
+    // eslint-disable-next-line no-console
+    // console.log('[getHighestRole] rolesArr:', rolesArr, '=> highest:', highest);
+    return highest;
+}
+
+function getCurrentUserHighestRole() {
+    if (!currentUser.value || !currentUser.value.Roles) return null;
+    const highest = getHighestRole(currentUser.value.Roles);
+    // Debug log
+    // eslint-disable-next-line no-console
+    // console.log('[getCurrentUserHighestRole] currentUser:', currentUser.value, '=> highest:', highest);
+    return highest;
+}
+
+function canEditUser(user) {
+    if (!user || !currentUser.value) return false;
+    if (user.id === currentUser.value.id) return false;
+    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
+    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    const myRole = getCurrentUserHighestRole();
+    const targetRole = getHighestRole(user.Roles);
+    if (!myRole || !targetRole) return false;
+    return myRole.priority < targetRole.priority;
+}
+
+function canResetPassword(user) {
+    // Debug log
+    // eslint-disable-next-line no-console
+    // console.log('[canResetPassword] user:', user);
+    return canEditUser(user);
+}
+
+function canDeleteUser(user) {
+    if (!user || !currentUser.value) return false;
+    if (user.id === currentUser.value.id) return false;
+    // Superadmin luôn được phép (trừ khi thao tác với chính mình)
+    if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
+    const myRole = getCurrentUserHighestRole();
+    const targetRole = getHighestRole(user.Roles);
+    if (!myRole || !targetRole) return false;
+    return myRole.priority < targetRole.priority;
+}
+
+// --- Filtered roles for dropdown (chỉ cho phép gán role thấp hơn mình) ---
+const filteredRoles = computed(() => {
+    const myRole = getCurrentUserHighestRole();
+    if (!roles.value || !roles.value.length || !myRole) return [];
+    // Superadmin có thể gán mọi role
+    if (myRole.code === 'superadmin') return roles.value;
+    // Chỉ gán được role có priority lớn hơn (tức là thấp hơn mình)
+    return roles.value.filter(r => r.priority > myRole.priority);
+});
 
 // Realtime password rules check
 const passwordRules = computed(() => {
@@ -420,13 +495,49 @@ async function fetchUsers() {
         credentials: 'include',
         headers: { 'Cache-Control': 'no-cache' }
     })
-    users.value = res.users
-    total.value = res.total
+    // Map priority cho từng role trong user.Roles
+    const priorityMap = {
+        superadmin: 1,
+        admin: 2,
+        manager: 3,
+        editor: 4,
+        consultant: 5
+    };
+    // Map priority cho từng role trong user.Roles (nếu cần)
+    users.value = res.users.map(u => ({
+        ...u,
+        Roles: (u.Roles || []).map(r => ({
+            ...r,
+            priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
+        }))
+    }));
+    // Sửa: lấy tổng số bản ghi từ res.total để phân trang và hiển thị đúng
+    total.value = res.total;
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
-    roles.value = res.roles
-    // console.log('[fetchRoles] Fetched roles:', roles.value);
+        // Map priority nếu chưa có
+        const priorityMap = {
+            superadmin: 1,
+            admin: 2,
+            manager: 3,
+            editor: 4,
+            consultant: 5
+        };
+        roles.value = res.roles.map(r => ({
+            ...r,
+            priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
+        }));
+        // Map priority cho currentUser.value.Roles nếu có
+        if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
+            currentUser.value.Roles = currentUser.value.Roles.map(r => {
+                const found = roles.value.find(role => role.code === r.code);
+                return {
+                    ...r,
+                    priority: r.priority !== undefined ? r.priority : (found ? found.priority : priorityMap[r.code] || 99)
+                };
+            });
+        }
 }
 function toggleSort(col) {
     if (sortBy.value === col) {
@@ -496,7 +607,12 @@ async function saveUser() {
         let msg = 'Đã có lỗi xảy ra.'
         if (err?.data?.message === 'USERNAME_EXISTS') msg = 'Tên đăng nhập đã tồn tại!'
         else if (err?.data?.message === 'EMAIL_EXISTS') msg = 'Email đã tồn tại!'
-        else if (err?.data?.message === 'USER_VALIDATION_FAILED') msg = 'Dữ liệu không hợp lệ!'
+        else if (err?.data?.message === 'USER_VALIDATION_FAILED') {
+            msg = 'Dữ liệu không hợp lệ!';
+            if (err?.data?.errors) {
+                errors.value = err.data.errors;
+            }
+        }
         else if (err?.data?.message === 'ASSIGN_ROLE_FAILED') msg = 'Gán vai trò thất bại!'
         else if (err?.data?.message === 'USER_CREATE_FAILED') msg = 'Tạo người dùng thất bại!'
         toastRef.value?.open(msg, 'error')
@@ -507,11 +623,6 @@ async function deleteUser(id) {
         await $fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
         fetchUsers()
     }
-}
-async function updateUserRole(user) {
-    // Not used in new multi-role version, but if needed:
-    await $fetch('/api/users/assign-role', { method: 'POST', body: { userId: user.id, roleIds: user.role_ids }, credentials: 'include' })
-    fetchUsers()
 }
 
 function viewUser(user) {

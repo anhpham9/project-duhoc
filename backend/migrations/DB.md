@@ -738,3 +738,28 @@ Lưu thông tin phiên đăng nhập của user, gồm refresh token, IP, user a
 
 ### 26. files
 Lưu thông tin file upload: user upload, public id, url, loại file, kích thước, thư mục, tag, v.v.
+
+## Chỉnh sửa DB
+
+### Thêm giá trị mới cho enum
+
+```SQL
+ALTER TYPE audit_action_enum 
+ADD VALUE 'reset_password';
+
+```
+
+### Thêm giá trị mới cho enum vào vị trí chỉ định
+
+```SQL
+ALTER TYPE audit_action_enum 
+ADD VALUE 'reset_password' AFTER 'refresh_token';
+
+```
+
+### xóa toàn bộ dữ liệu bảng + reset ID (sequence) + các thông tin liên quan tới bảng
+
+```SQL
+-- role_permissions cũng bị xóa khi xóa permissions
+TRUNCATE TABLE permissions RESTART IDENTITY CASCADE;
+```
