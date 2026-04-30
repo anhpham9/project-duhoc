@@ -139,11 +139,19 @@ for future, use multiple languages
             "vi": "Tài khoản {{username}} đã được tạo bởi quản trị viên.",
             "en": "Account {{username}} has been created by admin."
         },
-        "": {
+        "USER_DELETED": {
             "vi": "",
             "en": ""
         },
-        "": {
+        "USER_DELETED_BY_ADMIN": {
+            "vi": "",
+            "en": ""
+        },
+        "USER_PASSWORD_RESET": {
+            "vi": "",
+            "en": ""
+        },
+        "USER_PASSWORD_RESET_BY_ADMIN": {
             "vi": "",
             "en": ""
         },

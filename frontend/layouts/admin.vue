@@ -191,6 +191,11 @@ watch(() => route.path, checkAuth)
     line-height: 20px;
     transition: all 0.2s ease;
 }
+.detail-info {
+    background: #f9f9f9;
+    color: #555;
+    border: 1px solid #eee;
+}
 
 /* Focus */
 .form-group input:focus,

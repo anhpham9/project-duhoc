@@ -124,7 +124,7 @@
                             <template v-if="user.Roles && user.Roles.length">
                                 <span v-for="role in user.Roles" :key="role.id" :class="['role-badge', role.code]">{{
                                     role.code
-                                    }}</span>
+                                }}</span>
                             </template>
                         </td>
                         <td>
@@ -133,8 +133,8 @@
                                         class="fas fa-eye"></i></button>
                                 <button class="action-btn edit" @click="editUser(user)" title="Sửa"><i
                                         class="fas fa-edit"></i></button>
-                                <button class="action-btn reset" @click="" title="Đặt lại mật khẩu"><i
-                                        class="fas fa-key"></i></button>
+                                <button class="action-btn reset" @click="openResetPasswordModal(user)"
+                                    title="Đặt lại mật khẩu"><i class="fas fa-key"></i></button>
                                 <button class="action-btn delete" v-if="hasPermission('user.delete')"
                                     @click="deleteUser(user.id)" title="Xóa"><i class="fas fa-trash"></i></button>
                             </div>
@@ -284,6 +284,66 @@
                     </form>
                 </div>
             </div>
+            <!-- Modal reset mật khẩu -->
+            <div v-if="showResetPassword && resetUser" class="modal">
+                <div class="modal-content">
+
+                    <div v-if="resetResult" class="reset-result">
+                        <i class="fas fa-check-circle success-icon"></i>
+                        <p class="success-text">Reset mật khẩu thành công!</p>
+                    </div>
+                    <div v-else class="reset-confirmation">
+                        <i class="fas fa-key warning-icon"></i>
+                        <p>Bạn có chắc chắn muốn reset mật khẩu cho người dùng <strong>{{ resetUser.name }}</strong>?
+                        </p>
+                    </div>
+                    <div class="detail-content">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <p class="detail-title">Tên đăng nhập:</p>
+                                <p class="detail-info">{{ resetUser.username }}</p>
+                            </div>
+                            <div class="form-group">
+                                <p class="detail-title">Họ tên:</p>
+                                <p class="detail-info">{{ resetUser.name }}</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <p class="detail-title">Roles:</p>
+                            <template v-if="resetUser.Roles && resetUser.Roles.length">
+                                <span v-for="role in resetUser.Roles" :key="role.id"
+                                    :class="['role-badge', role.code]">{{ role.code
+                                    }}</span>
+                            </template>
+                        </div>
+                        <div v-if="resetResult">
+                            <div class="form-group">
+                                <p class="detail-title">Mật khẩu mới:</p>
+                                <div class="form-row">
+                                    <p class="detail-info new-password">{{ resetResult }}</p>
+                                    <!-- <span class="new-password">{{ resetResult }}</span> -->
+                                    <button class="btn copy" @click="copyPassword" title="Copy"><i
+                                            class="fas fa-copy"></i></button>
+                                </div>
+                            </div>
+                            <div class="important-note">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <p><strong>Quan trọng:</strong> Hãy copy và gửi thông tin này cho người dùng ngay. Sau
+                                    khi đóng
+                                    modal này, bạn sẽ không thể xem lại mật khẩu!</p>
+                            </div>
+                        </div>
+                        <div v-else class="modal-actions">
+                            <button class="btn btn-primary" @click="resetPassword" :disabled="resetLoading">Đặt lại mật
+                                khẩu</button>
+                            <button class="btn btn-secondary" @click="closeResetPasswordModal">Hủy</button>
+                        </div>
+                        <div v-if="resetResult" class="modal-actions">
+                            <button class="btn btn-secondary" @click="closeResetPasswordModal">Đóng</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <!-- --- PHÂN TRANG UI --- -->
             <BasePagination v-if="pageSize !== 'all' && Number(pageSize) > 0 && total > Number(pageSize)" v-model="page"
                 :total-pages="Math.ceil(total / Number(pageSize))" />
@@ -291,20 +351,7 @@
     </div>
 </template>
 <script setup>
-const errors = ref({})
-import { computed } from 'vue'
-// Realtime password rules check
-const passwordRules = computed(() => {
-    const pw = form.value.password || ''
-    return {
-        length: pw.length >= 8,
-        lower: /[a-z]/.test(pw),
-        upper: /[A-Z]/.test(pw),
-        digit: /\d/.test(pw)
-    }
-})
-
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import BaseToast from '~/components/admin/base/BaseToast.vue'
 import { validateUser, validateUsername, validateName, validateEmail, validatePhone, validatePassword } from '~/utils/fieldValidation.js'
 import { usePermissionGuard } from '~/composables/usePermissionGuard'
@@ -331,6 +378,24 @@ const page = ref(1)
 const total = ref(0)
 const currentUser = useCookie('currentUser')
 const { hasPermission } = usePermissionGuard(currentUser)
+
+const showResetPassword = ref(false)
+const resetUser = ref(null)
+const resetResult = ref("")
+const resetLoading = ref(false)
+
+const errors = ref({})
+
+// Realtime password rules check
+const passwordRules = computed(() => {
+    const pw = form.value.password || ''
+    return {
+        length: pw.length >= 8,
+        lower: /[a-z]/.test(pw),
+        upper: /[A-Z]/.test(pw),
+        digit: /\d/.test(pw)
+    }
+})
 
 async function fetchUsers() {
     const params = {
@@ -457,6 +522,37 @@ function closeDetail() {
     showDetail.value = false
     detailUser.value = null
 }
+
+function openResetPasswordModal(user) {
+    resetUser.value = user
+    showResetPassword.value = true
+    resetResult.value = ""
+}
+function closeResetPasswordModal() {
+    showResetPassword.value = false
+    resetUser.value = null
+    resetResult.value = ""
+}
+async function resetPassword() {
+    if (!resetUser.value) return
+    resetLoading.value = true
+    try {
+        const res = await $fetch(`/api/users/${resetUser.value.id}/reset-password`, { method: 'POST', credentials: 'include' })
+        resetResult.value = res.newPassword
+        toastRef.value?.open('Đặt lại mật khẩu thành công!', 'success')
+        fetchUsers()
+    } catch (err) {
+        toastRef.value?.open('Đặt lại mật khẩu thất bại!', 'error')
+    } finally {
+        resetLoading.value = false
+    }
+}
+function copyPassword() {
+    if (!resetResult.value) return
+    navigator.clipboard.writeText(resetResult.value)
+    toastRef.value?.open('Đã copy mật khẩu mới!', 'success')
+}
+
 function changePageSize() {
     page.value = 1
     fetchUsers()
@@ -598,10 +694,73 @@ definePageMeta({
     padding: 0;
 }
 
-/* Modal chi tiết user */
-.detail-row {
-    margin-bottom: 8px;
-    font-size: 1.05em;
+/* Modal reset password user */
+.new-password {
+    background: #fff3cd;
+    border-color: #ffeaa7;
+    font-weight: 600;
+    color: #856404;
+    min-width: 200px;
+}
+
+.btn.copy {
+    padding: 0.75rem;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 45px;
+}
+
+.btn.copy:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.important-note {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1.5rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.important-note i {
+    color: #856404;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.important-note p {
+    color: #856404;
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.reset-confirmation,
+.reset-result {
+    text-align: center;
+    padding-bottom: 20px;
+}
+
+.reset-confirmation .warning-icon,
+.reset-result .success-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.reset-confirmation .warning-icon {
+    color: #f57400;
+}
+
+.reset-result .success-icon {
+    color: #28a745;
 }
 
 /* Inline error style */

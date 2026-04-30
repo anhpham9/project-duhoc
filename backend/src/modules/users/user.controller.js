@@ -1,29 +1,4 @@
 import crypto from "crypto";
-// Hàm sinh mật khẩu ngẫu nhiên
-function generateRandomPassword(length = 12) {
-    return crypto.randomBytes(length).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, length);
-}
-
-// API: Reset mật khẩu user
-export const resetUserPassword = async (req, res) => {
-    const userId = req.params.id;
-    const user = await userRepo.getUserById(userId);
-    if (!user) return res.status(404).json({ message: "USER_NOT_FOUND" });
-    const newPassword = generateRandomPassword(12);
-    // Hash password nếu cần (giả sử userRepo.updateUser sẽ hash nếu cần)
-    await userRepo.updateUser(userId, { password: newPassword });
-    // Ghi log mật khẩu mới (sau này sẽ gửi email)
-    await logAudit({
-        user_id: req.user.id,
-        action: "reset_password",
-        entity_type: "user",
-        entity_id: userId,
-        data: { username: user.username, newPassword },
-        ip_address: req.ip,
-        user_agent: req.headers["user-agent"]
-    });
-    res.json({ newPassword });
-};
 import * as userRepo from "./user.repository.js";
 import { sendNotification } from "../notifications/notification.service.js";
 import { logAudit } from "../../utils/auditLogger.js";
@@ -191,6 +166,17 @@ export const deleteUser = async (req, res) => {
     // Xóa tất cả user_roles liên kết trước khi xóa user
     await userRepo.deleteUserRolesByUserId(id);
     await userRepo.deleteUserById(id);
+    // Gửi notification cho quản trị viên
+    await sendNotification({
+        user_id: oldUser.id,
+        type: "user",
+        action: "deleted",
+        title: "USER_DELETED",
+        message: "USER_DELETED_BY_ADMIN",
+        entity_type: "user",
+        entity_id: oldUser.id,
+        data: { deleted_by: req.user.id, username: oldUser.username }
+    });
     // Ghi vào audit_logs
     await logAudit({
         user_id: req.user.id,
@@ -204,13 +190,39 @@ export const deleteUser = async (req, res) => {
     res.json({ success: true });
 };
 
-// Multi-role assignment
-// export const assignRoleToUser = async (req, res) => {
-//     const { userId, roleIds } = req.body;
-//     if (!userId || !Array.isArray(roleIds)) {
-//         return res.status(400).json({ message: "userId and roleIds[] required" });
-//     }
-//     await userRepo.assignRolesToUser(userId, roleIds);
-//     res.json({ message: "Roles assigned" });
-// };
+// Hàm sinh mật khẩu ngẫu nhiên
+function generateRandomPassword(length = 12) {
+    return crypto.randomBytes(length).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, length);
+}
 
+// API: Reset mật khẩu user
+export const resetUserPassword = async (req, res) => {
+    const userId = req.params.id;
+    const user = await userRepo.getUserById(userId);
+    if (!user) return res.status(404).json({ message: "USER_NOT_FOUND" });
+    const newPassword = generateRandomPassword(12);
+    // Hash password nếu cần (giả sử userRepo.updateUser sẽ hash nếu cần)
+    await userRepo.updateUser(userId, { password: newPassword });
+    // Gửi notification cho user
+    await sendNotification({
+        user_id: user.id,
+        type: "user",
+        action: "reset_password",
+        title: "USER_PASSWORD_RESET",
+        message: "USER_PASSWORD_RESET_BY_ADMIN",
+        entity_type: "user",
+        entity_id: user.id,
+        data: { reset_by: req.user.id, username: user.username, password:newPassword },
+    });
+    // Ghi log mật khẩu mới (sau này sẽ gửi email)
+    await logAudit({
+        user_id: req.user.id,
+        action: "reset_password",
+        entity_type: "user",
+        entity_id: userId,
+        data: { username: user.username, password: newPassword },
+        ip_address: req.ip,
+        user_agent: req.headers["user-agent"]
+    });
+    res.json({ newPassword });
+};

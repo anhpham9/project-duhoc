@@ -97,6 +97,7 @@ BEGIN
         CREATE TYPE notification_action_enum AS ENUM (
             'created',
             'updated',
+            'reset_password',
             'deleted',
             'assigned',
             'published',
@@ -113,6 +114,7 @@ BEGIN
         CREATE TYPE audit_action_enum AS ENUM (
             'create',
             'update',
+            'reset_password',
             'delete',
             'login',            -- auth
             'logout',           -- auth
