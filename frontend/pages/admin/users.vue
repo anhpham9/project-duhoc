@@ -174,20 +174,33 @@
                             <p class="detail-title">Điện thoại:</p>
                             <p class="detail-info">{{ detailUser.phone || 'N/A' }}</p>
                         </div>
-                        <div class="form-group">
-                            <p class="detail-title">Active:</p>
-                            <span :class="['status', detailUser.is_active ? 'active' : 'inactive']">{{
-                                detailUser.is_active ?
-                                    '✔' : '✖'
-                            }}</span>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <p class="detail-title">Active:</p>
+                                <span :class="['status', detailUser.is_active ? 'active' : 'inactive']">{{
+                                    detailUser.is_active ?
+                                        '✔' : '✖'
+                                }}</span>
+                            </div>
+                            <div class="form-group">
+                                <p class="detail-title">Roles:</p>
+                                <template v-if="detailUser.Roles && detailUser.Roles.length">
+                                    <span v-for="role in detailUser.Roles" :key="role.id"
+                                        :class="['role-badge', role.code]">{{ role.code
+                                        }}</span>
+                                </template>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <p class="detail-title">Roles:</p>
-                            <template v-if="detailUser.Roles && detailUser.Roles.length">
-                                <span v-for="role in detailUser.Roles" :key="role.id"
-                                    :class="['role-badge', role.code]">{{ role.code
-                                    }}</span>
-                            </template>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <p class="detail-title">Được tạo bởi:</p>
+                                <p class="detail-info">{{ detailUser.created_by_name || detailUser.created_by || 'N/A' }}</p>
+                            </div>
+
+                            <div class="form-group">
+                                <p class="detail-title">Lần đăng nhập cuối:</p>
+                                <p class="detail-info">{{ formatDate(detailUser.last_login) }}</p>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-actions">
@@ -229,7 +242,7 @@
 
                             <div class="form-group">
                                 <label for="is_active">Trạng thái:</label>
-                                <label><input id="is_active" type="checkbox" v-model="form.is_active" /> Active</label>
+                                <label class="inline-label"><input id="is_active" type="checkbox" v-model="form.is_active" /> Active</label>
                             </div>
 
                             <div class="form-group">
@@ -364,6 +377,7 @@ import { useCookie } from '#imports'
 import BaseTable from '~/components/admin/base/BaseTable.vue'
 import BasePagination from '~/components/admin/base/BasePagination.vue'
 import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
+import { formatSmartDate, formatDate } from '~/utils/date'
 
 
 const users = ref([])
@@ -516,28 +530,28 @@ async function fetchUsers() {
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
-        // Map priority nếu chưa có
-        const priorityMap = {
-            superadmin: 1,
-            admin: 2,
-            manager: 3,
-            editor: 4,
-            consultant: 5
-        };
-        roles.value = res.roles.map(r => ({
-            ...r,
-            priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
-        }));
-        // Map priority cho currentUser.value.Roles nếu có
-        if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
-            currentUser.value.Roles = currentUser.value.Roles.map(r => {
-                const found = roles.value.find(role => role.code === r.code);
-                return {
-                    ...r,
-                    priority: r.priority !== undefined ? r.priority : (found ? found.priority : priorityMap[r.code] || 99)
-                };
-            });
-        }
+    // Map priority nếu chưa có
+    const priorityMap = {
+        superadmin: 1,
+        admin: 2,
+        manager: 3,
+        editor: 4,
+        consultant: 5
+    };
+    roles.value = res.roles.map(r => ({
+        ...r,
+        priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
+    }));
+    // Map priority cho currentUser.value.Roles nếu có
+    if (currentUser.value && Array.isArray(currentUser.value.Roles)) {
+        currentUser.value.Roles = currentUser.value.Roles.map(r => {
+            const found = roles.value.find(role => role.code === r.code);
+            return {
+                ...r,
+                priority: r.priority !== undefined ? r.priority : (found ? found.priority : priorityMap[r.code] || 99)
+            };
+        });
+    }
 }
 function toggleSort(col) {
     if (sortBy.value === col) {

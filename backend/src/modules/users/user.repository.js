@@ -19,12 +19,19 @@ export const searchUsersWithFilters = async ({ search = "", role, active, sort_b
     if (active === "true" || active === true) where.is_active = true;
     if (active === "false" || active === false) where.is_active = false;
 
-    // include role filter
+
+    // include role filter + join created_by (self join)
     const include = [
         {
             model: Role,
             attributes: ["id", "code", "description"],
             through: { attributes: [] },
+        },
+        {
+            model: User,
+            as: "creator",
+            attributes: ["id", "name"],
+            required: false,
         }
     ];
     if (role && role !== "all") {
@@ -52,7 +59,14 @@ export const searchUsersWithFilters = async ({ search = "", role, active, sort_b
     const total = await User.count({ where, include });
     // Lấy dữ liệu trang
     const users = await User.findAll({ where, include, order, ...(limit ? { limit, offset } : {}) });
-    return { users, total };
+    // Thêm trường created_by_name vào kết quả trả về
+    const usersWithCreator = users.map(u => {
+        const userObj = u.toJSON();
+        userObj.created_by_name = userObj.creator ? userObj.creator.name : null;
+        delete userObj.creator;
+        return userObj;
+    });
+    return { users: usersWithCreator, total };
 };
 
 export const findUserByUsername = async (username) => {

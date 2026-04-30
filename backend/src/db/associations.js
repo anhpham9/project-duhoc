@@ -5,6 +5,8 @@ import UserRole from "../modules/userRoles/userRole.model.js";
 import RolePermission from "../modules/rolePermissions/rolePermission.model.js";
 import ActivityLog from "../modules/auth/activityLog.model.js";
 
+// Self join để lấy thông tin người tạo
+User.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
 
 // User ↔ Role (qua UserRole)
 User.belongsToMany(Role, {

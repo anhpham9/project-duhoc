@@ -190,7 +190,9 @@ watch(() => route.path, checkAuth)
     font-size: 14px;
     line-height: 20px;
     transition: all 0.2s ease;
+    min-height: 41px;
 }
+
 .detail-info {
     background: #f9f9f9;
     color: #555;
@@ -207,6 +209,16 @@ watch(() => route.path, checkAuth)
 /* Checkbox group */
 .form-group label input[type="checkbox"] {
     margin-right: 6px;
+}
+.form-group label input[type="checkbox"]:focus {
+    box-shadow: none;
+}
+
+.inline-label {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 /* Row (2 cột) */

@@ -41,20 +41,48 @@ export const getAllUsers = async (req, res) => {
         page_size = 20
     } = req.query;
 
-    const { users, total } = await userRepo.searchUsersWithFilters({
+    // Lọc theo quyền: chỉ thấy user có role thấp hơn hoặc bằng mình (trừ superadmin)
+    const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
+    const myRole = getHighestRole(currentUser);
+    let allowedRolePriority = null;
+    if (myRole?.code !== 'superadmin') {
+        allowedRolePriority = rolePriority(myRole);
+    }
+
+    // Lấy tất cả users matching search/role/active (KHÔNG phân trang ở repo)
+    const { users: allUsers } = await userRepo.searchUsersWithFilters({
         search,
         role,
         active,
         sort_by,
         sort_dir,
-        page: Number(page),
-        page_size: page_size === 'all' ? 'all' : Number(page_size)
+        page: 1,
+        page_size: 'all',
+        allowedRolePriority: null // Không lọc RBAC ở repo
     });
 
-    const logData = await userRepo.getAllUsers();
-    console.log("getAllUsers with filters", { search, role, active, sort_by, sort_dir, page, page_size }, "result count", users.length);
-    console.log("Full user list for logging:", logData.length);
-    res.json({ users, total });
+    // Lọc RBAC ở đây
+    let filteredUsers = allUsers;
+    if (allowedRolePriority !== null) {
+        filteredUsers = allUsers.filter(u => {
+            if (!u.Roles || !u.Roles.length) return false;
+            const getRoleCode = r => r.code || (r.dataValues && r.dataValues.code);
+            const getRoleObj = r => ({ ...((r.dataValues) ? r.dataValues : r), code: getRoleCode(r) });
+            const highest = u.Roles.map(getRoleObj).reduce((min, r) => rolePriority(r) < rolePriority(min) ? r : min, getRoleObj(u.Roles[0]));
+            return rolePriority(highest) <= allowedRolePriority;
+        });
+    }
+
+    // Sau khi lọc, phân trang thủ công
+    let pagedUsers = filteredUsers;
+    let totalFiltered = filteredUsers.length;
+    let pageNum = Number(page);
+    let pageSizeNum = page_size === 'all' ? 'all' : Number(page_size);
+    if (pageSizeNum !== 'all') {
+        const startIdx = (pageNum - 1) * pageSizeNum;
+        pagedUsers = filteredUsers.slice(startIdx, startIdx + pageSizeNum);
+    }
+    res.json({ users: pagedUsers, total: totalFiltered });
 };
 
 export const getUserById = async (req, res) => {
@@ -65,7 +93,13 @@ export const getUserById = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-    const data = req.body;
+    const data = { ...req.body };
+    // Nếu phone là chuỗi rỗng, chuyển thành null để tránh lỗi unique
+    if (data.phone === "") data.phone = null;
+    // Gán created_by là id của user hiện tại nếu có
+    if (req.user && req.user.id) {
+        data.created_by = req.user.id;
+    }
     // Validate fields
     const errors = validateUser(data);
     if (Object.keys(errors).length > 0) {
@@ -84,15 +118,35 @@ export const createUser = async (req, res) => {
     if (!Array.isArray(data.role_ids) || data.role_ids.length === 0) {
         return res.status(400).json({ message: "ROLE_REQUIRED" });
     }
+
+    // RBAC: kiểm tra quyền tạo user với role nào
+    const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
+    const myRole = getHighestRole(currentUser);
+    if (myRole?.code !== 'superadmin') {
+        // Lấy danh sách role từ DB để kiểm tra code và priority
+        const allRoles = await userRepo.getAllRoles();
+        const assignedRoles = allRoles.filter(r => data.role_ids.includes(r.id));
+        // Không cho gán role superadmin
+        if (assignedRoles.some(r => r.code === 'superadmin')) {
+            return res.status(403).json({ message: "FORBIDDEN_ASSIGN_SUPERADMIN" });
+        }
+        // Không cho tạo user có role cao hơn hoặc bằng mình
+        if (assignedRoles.some(r => rolePriority(r) >= rolePriority(myRole))) {
+            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+        }
+    }
+
     // Tạo user và gán role, rollback nếu lỗi
     let user;
     try {
+        console.log("Created user", data);
         user = await userRepo.createUser(data);
         await userRepo.assignRolesToUser(user.id, data.role_ids);
     } catch (err) {
         if (user && user.id) {
             await userRepo.deleteUserById(user.id);
         }
+        console.error(err);
         return res.status(500).json({ message: "ASSIGN_ROLE_FAILED" });
     }
     // Gửi notification cho user mới
@@ -123,6 +177,8 @@ export const updateUser = async (req, res) => {
 
     const userId = req.params.id;
     const data = { ...req.body };
+    // Nếu phone là chuỗi rỗng, chuyển thành null để tránh lỗi unique
+    if (data.phone === "") data.phone = null;
     // Tách role_ids khỏi data để validation
     const { role_ids } = data;
     delete data.role_ids;

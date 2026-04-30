@@ -171,9 +171,9 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP,
+    created_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    created_by BIGINT REFERENCES users(id),
     deleted_at TIMESTAMP
 );
 CREATE TRIGGER trigger_users_updated_at
