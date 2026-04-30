@@ -470,7 +470,7 @@ function getCurrentUserHighestRole() {
 
 function canEditUser(user) {
     if (!user || !currentUser.value) return false;
-    if (user.id === currentUser.value.id) return false;
+    // if (user.id === currentUser.value.id) return false; // Cho phép edit chính mình để cập nhật thông tin cá nhân
     // Superadmin luôn được phép (trừ khi thao tác với chính mình)
     if (currentUser.value.Roles && currentUser.value.Roles.some(r => r.code === 'superadmin')) return true;
     const myRole = getCurrentUserHighestRole();
