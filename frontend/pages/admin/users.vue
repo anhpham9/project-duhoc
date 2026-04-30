@@ -397,6 +397,7 @@ const filterRole = ref('all')
 const filterActive = ref('all')
 const sortBy = ref('id')
 const sortDir = ref('asc')
+const PAGE_SIZE_KEY = 'users_page_size';
 const pageSize = ref('5')
 const page = ref(1)
 const total = ref(0)
@@ -724,6 +725,10 @@ function onFilterChange() {
 }
 
 function changePageSize() {
+    // Lưu pageSize vào localStorage
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(PAGE_SIZE_KEY, pageSize.value);
+    }
     page.value = 1
     fetchUsers()
 }
@@ -750,6 +755,13 @@ function resetFilters() {
 
 // --- Lifecycle ---
 onMounted(() => {
+    // Đọc pageSize từ localStorage nếu có
+    if (typeof window !== 'undefined') {
+        const savedPageSize = localStorage.getItem(PAGE_SIZE_KEY);
+        if (savedPageSize) {
+            pageSize.value = savedPageSize;
+        }
+    }
     fetchRoles()
     fetchUsers()
 })
