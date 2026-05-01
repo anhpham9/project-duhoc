@@ -115,6 +115,7 @@ BEGIN
             'create',
             'update',
             'reset_password',
+            'change_password',
             'delete',
             'login',            -- auth
             'logout',           -- auth
@@ -168,6 +169,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(150) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE,
+    zalo VARCHAR(100) UNIQUE,
+    fb VARCHAR(200) UNIQUE,
     password TEXT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     last_login TIMESTAMP,

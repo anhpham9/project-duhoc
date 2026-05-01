@@ -22,6 +22,14 @@ const User = sequelize.define(
             type: DataTypes.STRING,
             unique: true,
         },
+        zalo: {
+            type: DataTypes.STRING,
+            unique: true,
+        },
+        fb: {
+            type: DataTypes.STRING,
+            unique: true,
+        },
         password: DataTypes.TEXT,
         is_active: {
             type: DataTypes.BOOLEAN,

@@ -2,8 +2,7 @@ import crypto from "crypto";
 import * as userRepo from "./user.repository.js";
 import { sendNotification } from "../notifications/notification.service.js";
 import { logAudit } from "../../utils/auditLogger.js";
-import { logActivity } from "../../utils/activityLogger.js";
-import { validateUser, validateUpdateUser } from "./user.validation.js";
+import { validateUser, validateUpdateUser, trimStringFields } from "./user.validation.js";
 
 // RBAC helpers (dùng chung cho nhiều API)
 export const rolePriority = role => {
@@ -74,7 +73,12 @@ async function getFilteredUsers(req) {
 
 export const getAllUsers = async (req, res) => {
     const filteredUsers = await getFilteredUsers(req);
-    res.json({ users: filteredUsers, total: filteredUsers.length });
+    // Remove password from all users
+    const usersSafe = filteredUsers.map(u => {
+        const { password, ...rest } = u.dataValues || u;
+        return rest;
+    });
+    res.json({ users: usersSafe, total: usersSafe.length });
 };
 
 export const getAllUsersWithPagination = async (req, res) => {
@@ -88,20 +92,29 @@ export const getAllUsersWithPagination = async (req, res) => {
         const startIdx = (pageNum - 1) * pageSizeNum;
         pagedUsers = filteredUsers.slice(startIdx, startIdx + pageSizeNum);
     }
-    res.json({ users: pagedUsers, total: totalFiltered });
+    // Remove password from all users in pagedUsers
+    const usersSafe = pagedUsers.map(u => {
+        const { password, ...rest } = u.dataValues || u;
+        return rest;
+    });
+    res.json({ users: usersSafe, total: totalFiltered });
 };
 
 export const getUserById = async (req, res) => {
     const { id } = req.params;
     const user = await userRepo.getUserById(id);
-    if (!user) return res.status(404).json({ message: "USER_NOT_FOUND" });
-    res.json({ user });
+    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+    const { password, ...userSafe } = user.dataValues || user;
+    res.json({ user: userSafe });
 };
 
 export const createUser = async (req, res) => {
-    const data = { ...req.body };
+    const data = trimStringFields({ ...req.body });
     // Nếu phone là chuỗi rỗng, chuyển thành null để tránh lỗi unique
-    if (data.phone === "") data.phone = null;
+    // if (data.phone === "") data.phone = null;
+    // if (data.zalo === "") data.zalo = null;
+    // if (data.fb === "") data.fb = null;
+
     // Gán created_by là id của user hiện tại nếu có
     if (req.user && req.user.id) {
         data.created_by = req.user.id;
@@ -109,20 +122,41 @@ export const createUser = async (req, res) => {
     // Validate fields
     const errors = validateUser(data);
     if (Object.keys(errors).length > 0) {
-        return res.status(400).json({ message: "USER_VALIDATION_FAILED", errors });
+        return res.status(400).json({ errors: { ...errors } });
     }
     // Check duplicate username/email
     const existingUserByUsername = await userRepo.findUserByUsername(data.username);
     if (existingUserByUsername) {
-        return res.status(409).json({ message: "USERNAME_EXISTS" });
+        return res.status(409).json({ errors: { username: "USERNAME_EXISTS" } });
     }
     const existingUserByEmail = await userRepo.findUserByEmail(data.email);
     if (existingUserByEmail) {
-        return res.status(409).json({ message: "EMAIL_EXISTS" });
+        return res.status(409).json({ errors: { email: "EMAIL_EXISTS" } });
     }
+
+    // Check duplicate phone/zalo/fb
+    if (data.phone) {
+        const existingUserByPhone = await userRepo.findUserByPhone(data.phone);
+        if (existingUserByPhone) {
+            return res.status(409).json({ errors: { phone: "PHONE_EXISTS" } });
+        }
+    }
+    if (data.zalo) {
+        const existingUserByZalo = await userRepo.findUserByZalo(data.zalo);
+        if (existingUserByZalo) {
+            return res.status(409).json({ errors: { zalo: "ZALO_EXISTS" } });
+        }
+    }
+    if (data.fb) {
+        const existingUserByFb = await userRepo.findUserByFb(data.fb);
+        if (existingUserByFb) {
+            return res.status(409).json({ errors: { fb: "FB_EXISTS" } });
+        }
+    }
+
     // Bắt buộc phải có role_ids
     if (!Array.isArray(data.role_ids) || data.role_ids.length === 0) {
-        return res.status(400).json({ message: "ROLE_REQUIRED" });
+        return res.status(400).json({ errors: { role_ids: "ROLE_REQUIRED" } });
     }
 
     // RBAC: kiểm tra quyền tạo user với role nào
@@ -134,11 +168,11 @@ export const createUser = async (req, res) => {
         const assignedRoles = allRoles.filter(r => data.role_ids.includes(r.id));
         // Không cho gán role superadmin
         if (assignedRoles.some(r => r.code === 'superadmin')) {
-            return res.status(403).json({ message: "FORBIDDEN_ASSIGN_SUPERADMIN" });
+            return res.status(403).json({ error: "FORBIDDEN_ASSIGN_SUPERADMIN" });
         }
         // Không cho tạo user có role cao hơn hoặc bằng mình
         if (assignedRoles.some(r => rolePriority(r) >= rolePriority(myRole))) {
-            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+            return res.status(403).json({ error: "FORBIDDEN_ROLE_LEVEL" });
         }
     }
 
@@ -153,8 +187,9 @@ export const createUser = async (req, res) => {
             await userRepo.deleteUserById(user.id);
         }
         console.error(err);
-        return res.status(500).json({ message: "ASSIGN_ROLE_FAILED" });
+        return res.status(500).json({ error: "ASSIGN_ROLE_FAILED" });
     }
+    const { password, ...userSafe } = user.dataValues || user;
     // Gửi notification cho user mới
     await sendNotification({
         user_id: user.id,
@@ -172,19 +207,17 @@ export const createUser = async (req, res) => {
         action: "create",
         entity_type: "user",
         entity_id: user.id,
-        data: { after: user },
+        data: { after: userSafe },
         ip_address: req.ip,
         user_agent: req.headers["user-agent"]
     });
-    res.json({ user });
+    res.json({ user: userSafe });
 };
 
 export const updateUser = async (req, res) => {
 
     const userId = req.params.id;
-    const data = { ...req.body };
-    // Nếu phone là chuỗi rỗng, chuyển thành null để tránh lỗi unique
-    if (data.phone === "") data.phone = null;
+    const data = trimStringFields({ ...req.body });
     // Tách role_ids khỏi data để validation
     const { role_ids } = data;
     delete data.role_ids;
@@ -213,7 +246,7 @@ export const updateUser = async (req, res) => {
     if (myRole?.code !== 'superadmin') {
         // Cấm thao tác với user có role >= mình
         if (rolePriority(targetRole) >= rolePriority(myRole)) {
-            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+            return res.status(403).json({ error: "FORBIDDEN_ROLE_LEVEL" });
         }
         // Cấm gán role superadmin cho user khác
         if (Array.isArray(role_ids)) {
@@ -221,7 +254,7 @@ export const updateUser = async (req, res) => {
             const allRoles = await userRepo.getAllRoles();
             const assignedRoles = allRoles.filter(r => role_ids.includes(r.id));
             if (assignedRoles.some(r => r.code === 'superadmin')) {
-                return res.status(403).json({ message: "FORBIDDEN_ASSIGN_SUPERADMIN" });
+                return res.status(403).json({ error: "FORBIDDEN_ASSIGN_SUPERADMIN" });
             }
         }
     }
@@ -230,29 +263,51 @@ export const updateUser = async (req, res) => {
     // Validate fields
     const errors = validateUpdateUser(data);
     if (Object.keys(errors).length > 0) {
-        return res.status(400).json({ message: "USER_VALIDATION_FAILED", errors });
+        return res.status(400).json({ errors: { ...errors } });
     }
     // Check duplicate username/email (phải khác id hiện tại)
     const existingUserByUsername = await userRepo.findUserByUsername(data.username);
     if (existingUserByUsername && String(existingUserByUsername.id) !== String(userId)) {
-        return res.status(409).json({ message: "USERNAME_EXISTS" });
+        return res.status(409).json({ errors: { username: "USERNAME_EXISTS" } });
     }
     const existingUserByEmail = await userRepo.findUserByEmail(data.email);
     if (existingUserByEmail && String(existingUserByEmail.id) !== String(userId)) {
-        return res.status(409).json({ message: "EMAIL_EXISTS" });
+        return res.status(409).json({ errors: { email: "EMAIL_EXISTS" } });
     }
+
+    // Check duplicate phone/zalo/fb
+    if (data.phone) {
+        const existingUserByPhone = await userRepo.findUserByPhone(data.phone);
+        if (existingUserByPhone && String(existingUserByPhone.id) !== String(userId)) {
+            return res.status(409).json({ errors: { phone: "PHONE_EXISTS" } });
+        }
+    }
+    if (data.zalo) {
+        const existingUserByZalo = await userRepo.findUserByZalo(data.zalo);
+        if (existingUserByZalo && String(existingUserByZalo.id) !== String(userId)) {
+            return res.status(409).json({ errors: { zalo: "ZALO_EXISTS" } });
+        }
+    }
+    if (data.fb) {
+        const existingUserByFb = await userRepo.findUserByFb(data.fb);
+        if (existingUserByFb && String(existingUserByFb.id) !== String(userId)) {
+            return res.status(409).json({ errors: { fb: "FB_EXISTS" } });
+        }
+    }
+
     // Bắt buộc phải có role_ids
     if (!Array.isArray(role_ids) || role_ids.length === 0) {
-        return res.status(400).json({ message: "ROLE_REQUIRED" });
+        return res.status(400).json({ errors: { role_ids: "ROLE_REQUIRED" } });
     }
     // Update user
     try {
         await userRepo.updateUser(userId, data);
         await userRepo.assignRolesToUser(userId, role_ids);
     } catch (err) {
-        return res.status(500).json({ message: "USER_UPDATE_FAILED" });
+        return res.status(500).json({ error: "USER_UPDATE_FAILED" });
     }
-    const user = await userRepo.getUserById(userId);
+    let user = await userRepo.getUserById(userId);
+    const { password, ...userSafe } = user.dataValues || user;
     // Gửi notification cho user
     await sendNotification({
         user_id: user.id,
@@ -270,11 +325,11 @@ export const updateUser = async (req, res) => {
         action: "update",
         entity_type: "user",
         entity_id: user.id,
-        data: { after: user },
+        data: { after: userSafe },
         ip_address: req.ip,
         user_agent: req.headers["user-agent"]
     });
-    res.json({ user });
+    res.json({ user: userSafe });
 };
 
 export const deleteUser = async (req, res) => {
@@ -317,13 +372,13 @@ export const resetUserPassword = async (req, res) => {
     const userId = req.params.id;
     const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
     const targetUser = await userRepo.getUserWithRolesAndPermissions(userId);
-    if (!targetUser) return res.status(404).json({ message: "USER_NOT_FOUND" });
+    if (!targetUser) return res.status(404).json({ error: "USER_NOT_FOUND" });
     const myRole = getHighestRole(currentUser);
     const targetRole = getHighestRole(targetUser);
     // Superadmin có toàn quyền, các role khác bị giới hạn
     if (myRole?.code !== 'superadmin') {
         if (rolePriority(targetRole) >= rolePriority(myRole)) {
-            return res.status(403).json({ message: "FORBIDDEN_ROLE_LEVEL" });
+            return res.status(403).json({ error: "FORBIDDEN_ROLE_LEVEL" });
         }
     }
     const newPassword = generateRandomPassword(12);
@@ -337,7 +392,8 @@ export const resetUserPassword = async (req, res) => {
         message: "USER_PASSWORD_RESET_BY_ADMIN",
         entity_type: "user",
         entity_id: targetUser.id,
-        data: { reset_by: req.user.id, username: targetUser.username, password: newPassword },
+        data: { reset_by: req.user.id, username: targetUser.username, password: newPassword }, // sau này sẽ gửi email nên không cần gửi password trong notification
+        // data: { reset_by: req.user.id, username: targetUser.username },
     });
     // Ghi log mật khẩu mới (sau này sẽ gửi email)
     await logAudit({
@@ -345,7 +401,8 @@ export const resetUserPassword = async (req, res) => {
         action: "reset_password",
         entity_type: "user",
         entity_id: userId,
-        data: { username: targetUser.username, password: newPassword },
+        data: { username: targetUser.username, password: newPassword }, // sau này sẽ gửi email nên không cần ghi log password
+        // data: { username: targetUser.username },
         ip_address: req.ip,
         user_agent: req.headers["user-agent"]
     });

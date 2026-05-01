@@ -571,15 +571,15 @@ CREATE TABLE audit_logs (
     id SERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(id),
     action VARCHAR(100) NOT NULL,         -- ví dụ: 'create_user', 'delete_news'
-    object_type VARCHAR(50),              -- ví dụ: 'user', 'news', 'contact'
-    object_id BIGINT,                     -- id của đối tượng bị tác động
+    entity_type VARCHAR(50),              -- ví dụ: 'user', 'news', 'contact'
+    entity_id BIGINT,                     -- id của đối tượng bị tác động
     data JSONB,                           -- dữ liệu chi tiết (trước/sau)
     ip_address VARCHAR(50),
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_object ON audit_logs(object_type, object_id);
+CREATE INDEX idx_audit_logs_object ON audit_logs(entity_type, entity_id);
 ```
 
 ### 22. 🧱 Password Reset Tokens (Quên mật khẩu)
@@ -757,9 +757,25 @@ ADD VALUE 'reset_password' AFTER 'refresh_token';
 
 ```
 
-### xóa toàn bộ dữ liệu bảng + reset ID (sequence) + các thông tin liên quan tới bảng
+### Xóa toàn bộ dữ liệu bảng + reset ID (sequence) + các thông tin liên quan tới bảng
 
 ```SQL
 -- role_permissions cũng bị xóa khi xóa permissions
 TRUNCATE TABLE permissions RESTART IDENTITY CASCADE;
 ```
+
+### Thêm trường vào bảng có sẵn
+
+```SQL
+ALTER TABLE users
+ADD COLUMN zalo VARCHAR(100),       -- link zalo
+ADD COLUMN fb VARCHAR(200);         -- link fb
+
+-- Sau đó mới thêm unique
+ALTER TABLE users
+ADD CONSTRAINT users_zalo_unique UNIQUE (zalo);
+
+ALTER TABLE users
+ADD CONSTRAINT users_fb_unique UNIQUE (fb);
+```
+

@@ -10,6 +10,7 @@ import {
     updateUser,
     deleteUser
 } from "./user.controller.js";
+import { getProfile, updateProfile, changeProfilePassword, getActivityLogs } from "./profile.controller.js";
 
 const router = express.Router();
 
@@ -23,6 +24,13 @@ const canListUsers = async (req, res, next) => {
     return res.status(403).json({ message: "Forbidden" });
 };
 
+// Profile routes
+router.get("/profile", authMiddleware, getProfile);
+router.put("/profile", authMiddleware, updateProfile);
+router.put("/profile/password", authMiddleware, changeProfilePassword);
+router.get("/profile/activity-logs", authMiddleware, getActivityLogs);
+
+// Manage Users routes
 router.get("/", authMiddleware, canListUsers, getAllUsersWithPagination);
 router.get("/exportToExcel", authMiddleware, canListUsers, getAllUsers);
 router.get("/:id", authMiddleware, userRbacMiddleware("read"), getUserById);
@@ -31,6 +39,5 @@ router.put("/:id", authMiddleware, userRbacMiddleware("update"), updateUser);
 router.delete("/:id", authMiddleware, userRbacMiddleware("delete"), deleteUser);
 // Đặt lại mật khẩu user
 router.post("/:id/reset-password", authMiddleware, resetUserPassword);
-// router.post("/assign-role", authMiddleware, userRbacMiddleware("update"), assignRoleToUser);
 
 export default router;

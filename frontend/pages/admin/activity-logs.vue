@@ -24,7 +24,7 @@
                         <span v-else>?</span>
                     </td>
                     <td>{{ log.action }}</td>
-                    <td>{{ log.object_type || '' }}{{ log.object_id ? ' #' + log.object_id : '' }}</td>
+                    <td>{{ log.entity_type || '' }}{{ log.entity_id ? ' #' + log.entity_id : '' }}</td>
                     <td>
                         <pre
                             style="max-width:300px;white-space:pre-wrap;">{{ log.data ? JSON.stringify(log.data, null, 2) : '' }}</pre>

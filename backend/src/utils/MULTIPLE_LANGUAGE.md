@@ -69,10 +69,6 @@ for future, use multiple languages
             "vi": "",
             "en": ""
         },
-        "": {
-            "vi": "",
-            "en": ""
-        },
         "NAME_REQUIRED": {
             "vi": "",
             "en": ""
@@ -121,6 +117,10 @@ for future, use multiple languages
             "vi": "",
             "en": ""
         },
+        "WRONG_PASSWORD": {
+            "vi": "",
+            "en": ""
+        },
         "ROLE_REQUIRED": {
             "vi": "",
             "en": ""
@@ -152,6 +152,58 @@ for future, use multiple languages
             "en": ""
         },
         "USER_PASSWORD_RESET_BY_ADMIN": {
+            "vi": "",
+            "en": ""
+        },
+        "": {
+            "vi": "",
+            "en": ""
+        },
+    },
+    "message": {
+        "USER_CHANGE_PASSWORD_VIA_PROFILE": {
+            "vi": "",
+            "en": ""
+        },
+        "": {
+            "vi": "",
+            "en": ""
+        },
+        "": {
+            "vi": "",
+            "en": ""
+        },
+    },
+    "error": {
+        "USER_NOT_FOUND": {
+            "vi": "",
+            "en": ""
+        },
+        "USER_UPDATE_FAILED": {
+            "vi": "",
+            "en": ""
+        },
+        "FORBIDDEN_ASSIGN_SUPERADMIN": {
+            "vi": "",
+            "en": ""
+        },
+        "FORBIDDEN_ROLE_LEVEL": {
+            "vi": "",
+            "en": ""
+        },
+        "ASSIGN_ROLE_FAILED": {
+            "vi": "",
+            "en": ""
+        },
+        "GET_ACTIVITY_LOGS_FAILED": {
+            "vi": "",
+            "en": ""
+        },
+        "": {
+            "vi": "",
+            "en": ""
+        },
+        "": {
             "vi": "",
             "en": ""
         },

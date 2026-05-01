@@ -162,17 +162,29 @@
                                 <p class="detail-info">{{ detailUser.username }}</p>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <p class="detail-title">Họ tên:</p>
-                            <p class="detail-info">{{ detailUser.name }}</p>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <p class="detail-title">Họ tên:</p>
+                                <p class="detail-info">{{ detailUser.name }}</p>
+                            </div>
+                            <div class="form-group">
+                                <p class="detail-title">Email:</p>
+                                <p class="detail-info">{{ detailUser.email }}</p>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <p class="detail-title">Điện thoại:</p>
+                                <p class="detail-info">{{ detailUser.phone || 'N/A' }}</p>
+                            </div>
+                            <div class="form-group">
+                                <p class="detail-title">Zalo:</p>
+                                <p class="detail-info">{{ detailUser.zalo || 'N/A' }}</p>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <p class="detail-title">Email:</p>
-                            <p class="detail-info">{{ detailUser.email }}</p>
-                        </div>
-                        <div class="form-group">
-                            <p class="detail-title">Điện thoại:</p>
-                            <p class="detail-info">{{ detailUser.phone || 'N/A' }}</p>
+                            <p class="detail-title">Facebook:</p>
+                            <p class="detail-info">{{ detailUser.fb || 'N/A' }}</p>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -215,17 +227,19 @@
                 <div class="modal-content">
                     <h3>{{ editingUser ? 'Sửa người dùng' : 'Thêm người dùng' }}</h3>
                     <form class="create-form" @submit.prevent="saveUser">
-                        <div class="form-group">
-                            <label for="username">Username: <span class="required">*</span></label>
-                            <input id="username" v-model="form.username" placeholder="Username" required
-                                :class="{ 'input-error': errors.username }" />
-                            <span v-if="errors.username" class="error-msg">{{ errors.username }}</span>
-                        </div>
-                        <div class="form-group">
-                            <label for="name">Họ tên: <span class="required">*</span></label>
-                            <input id="name" v-model="form.name" placeholder="Họ tên" required
-                                :class="{ 'input-error': errors.name }" />
-                            <span v-if="errors.name" class="error-msg">{{ errors.name }}</span>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="username">Username: <span class="required">*</span></label>
+                                <input id="username" v-model="form.username" placeholder="Username" required
+                                    :class="{ 'input-error': errors.username }" />
+                                <span v-if="errors.username" class="error-msg">{{ errors.username }}</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="name">Họ tên: <span class="required">*</span></label>
+                                <input id="name" v-model="form.name" placeholder="Họ tên" required
+                                    :class="{ 'input-error': errors.name }" />
+                                <span v-if="errors.name" class="error-msg">{{ errors.name }}</span>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="email">Email: <span class="required">*</span></label>
@@ -233,11 +247,25 @@
                                 :class="{ 'input-error': errors.email }" />
                             <span v-if="errors.email" class="error-msg">{{ errors.email }}</span>
                         </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="phone">Điện thoại:</label>
+                                <input id="phone" v-model="form.phone" placeholder="Điện thoại"
+                                    :class="{ 'input-error': errors.phone }" />
+                                <span v-if="errors.phone" class="error-msg">{{ errors.phone }}</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="zalo">Zalo:</label>
+                                <input id="zalo" v-model="form.zalo" placeholder="số_điện_thoại"
+                                    :class="{ 'input-error': errors.zalo }" />
+                                <span v-if="errors.zalo" class="error-msg">{{ errors.zalo }}</span>
+                            </div>
+                        </div>
                         <div class="form-group">
-                            <label for="phone">Điện thoại:</label>
-                            <input id="phone" v-model="form.phone" placeholder="Điện thoại"
-                                :class="{ 'input-error': errors.phone }" />
-                            <span v-if="errors.phone" class="error-msg">{{ errors.phone }}</span>
+                            <label for="fb">Facebook:</label>
+                            <input id="fb" v-model="form.fb" placeholder="Link Facebook"
+                                :class="{ 'input-error': errors.fb }" />
+                            <span v-if="errors.fb" class="error-msg">{{ errors.fb }}</span>
                         </div>
                         <div class="form-row">
 
@@ -391,7 +419,7 @@ const toastRef = ref()
 const roles = ref([])
 const detailUser = ref(null)
 const editingUser = ref(null)
-const form = ref({ username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] })
+const form = ref({ username: '', name: '', email: '', phone: '', zalo: '', fb: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] })
 const search = ref('')
 const filterRole = ref('all')
 const filterActive = ref('all')
@@ -532,7 +560,7 @@ async function fetchUsers() {
 }
 async function fetchRoles() {
     const res = await $fetch('/api/roles', { credentials: 'include' })
-    
+
     roles.value = res.roles.map(r => ({
         ...r,
         priority: r.priority !== undefined ? r.priority : priorityMap[r.code] || 99
@@ -581,6 +609,8 @@ async function exportUsersExcel() {
             { label: 'Tên đăng nhập', key: 'username', width: 20 },
             { label: 'Email', key: 'email', width: 30 },
             { label: 'Số điện thoại', key: 'phone', value: row => row.phone || '', width: 15 },
+            { label: 'Zalo', key: 'zalo', value: row => row.zalo || '', width: 15 },
+            { label: 'Facebook', key: 'fb', value: row => row.fb || '', width: 25 },
             { label: 'Quyền', key: 'Roles', value: row => (row.Roles && row.Roles.length ? row.Roles.map(r => r.code).join(', ') : ''), width: 15 },
             { label: 'Trạng thái', key: 'is_active', value: row => row.is_active ? 'Hoạt động' : 'Tạm khóa', width: 12 },
             { label: 'Ngày tạo', key: 'created_at', value: row => formatDate(row.created_at), width: 12 },
@@ -615,7 +645,7 @@ function editUser(user) {
 function closeModal() {
     showAdd.value = false
     editingUser.value = null
-    form.value = { username: '', name: '', email: '', phone: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] }
+    form.value = { username: '', name: '', email: '', phone: '', zalo: '', fb: '', password: '', passwordRepeat: '', is_active: true, role_ids: [] }
     errors.value = {}
 }
 
@@ -666,17 +696,19 @@ async function saveUser() {
         closeModal()
         fetchUsers()
     } catch (err) {
+        if (err?.data?.errors) {
+            errors.value = err.data.errors;
+        }
         let msg = 'Đã có lỗi xảy ra.'
         if (err?.data?.message === 'USERNAME_EXISTS') msg = 'Tên đăng nhập đã tồn tại!'
+        if (err?.data?.message === 'NAME_INVALID') msg = 'Tên không hợp lệ!'
         else if (err?.data?.message === 'EMAIL_EXISTS') msg = 'Email đã tồn tại!'
         else if (err?.data?.message === 'USER_VALIDATION_FAILED') {
             msg = 'Dữ liệu không hợp lệ!';
-            if (err?.data?.errors) {
-                errors.value = err.data.errors;
-            }
         }
         else if (err?.data?.message === 'ASSIGN_ROLE_FAILED') msg = 'Gán vai trò thất bại!'
         else if (err?.data?.message === 'USER_CREATE_FAILED') msg = 'Tạo người dùng thất bại!'
+
         toastRef.value?.open(msg, 'error')
     }
 }
@@ -971,6 +1003,11 @@ definePageMeta({
 }
 
 @media (max-width: 768px) {
+    .modal-content {
+        width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
 
     .page-filters {
         flex-wrap: wrap;
@@ -986,8 +1023,6 @@ definePageMeta({
 @media (max-width: 480px) {
     .modal-content {
         min-width: 90vw;
-        max-height: 80vh;
-        overflow-y: auto;
     }
 }
 </style>

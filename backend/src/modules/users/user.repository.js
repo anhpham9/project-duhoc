@@ -70,6 +70,18 @@ export const findUserByEmail = async (email) => {
     return User.findOne({ where: { email } });
 }
 
+export const findUserByPhone = async (phone) => {
+    return User.findOne({ where: { phone } });
+}
+
+export const findUserByZalo = async (zalo) => {
+    return User.findOne({ where: { zalo } });
+}
+
+export const findUserByFb = async (fb) => {
+    return User.findOne({ where: { fb } });
+}
+
 export const getAllRoles = async () => {
     return Role.findAll();
 };
@@ -89,7 +101,26 @@ export const getAllUsersWithRoles = async () => {
 };
 
 export const getUserById = async (id) => {
-    return User.findByPk(id);
+    const user = await User.findByPk(id, {
+        include: [
+            {
+                model: User,
+                as: "creator",
+                attributes: ["id", "name"],
+                required: false,
+            },
+            {
+                model: Role,
+                attributes: ["id", "code", "description"],
+                through: { attributes: [] },
+            }
+        ]
+    });
+    if (!user) return null;
+    const userObj = user.toJSON();
+    userObj.created_by_name = userObj.creator ? userObj.creator.name : null;
+    delete userObj.creator;
+    return userObj;
 };
 
 export const getUserByUsername = async (username) => {

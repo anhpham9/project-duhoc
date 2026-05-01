@@ -38,8 +38,8 @@ export const login = async (req, res) => {
     logActivity({
         user_id: user.id,
         action: "login",
-        object_type: "user",
-        object_id: user.id,
+        entity_type: "user",
+        entity_id: user.id,
         data: { ip: req.ip, user_agent: req.headers["user-agent"] }
     });
 
@@ -87,8 +87,8 @@ export const refresh = async (req, res) => {
         logActivity({
             user_id: decoded.id,
             action: "refresh_token",
-            object_type: "user",
-            object_id: decoded.id,
+            entity_type: "user",
+            entity_id: decoded.id,
             data: { ip: req.ip, user_agent: req.headers["user-agent"] }
         });
 
@@ -132,8 +132,8 @@ export const logout = async (req, res) => {
         logActivity({
             user_id: userId,
             action: "logout",
-            object_type: "user",
-            object_id: userId,
+            entity_type: "user",
+            entity_id: userId,
             data: { ip: req.ip, user_agent: req.headers["user-agent"] }
         });
     }

@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineExpose } from 'vue'
+import { ref, computed } from 'vue'
 
 const notification = ref({
     show: false,
