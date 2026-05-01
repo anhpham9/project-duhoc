@@ -172,3 +172,22 @@ export const assignRolesToUser = async (userId, roleIds) => {
         }
     });
 };
+
+// Lấy tất cả user thuộc 1 hoặc nhiều role (theo code hoặc id)
+export async function getUsersByRoles(roles) {
+    // roles: array id hoặc code
+    const whereRole = Array.isArray(roles) && roles.length > 0
+        ? (typeof roles[0] === 'number' ? { id: roles } : { code: roles })
+        : {};
+    const users = await User.findAll({
+        include: [{
+            model: Role,
+            attributes: ["id", "code"],
+            where: whereRole,
+            through: { attributes: [] }
+        }],
+        where: {},
+        raw: false
+    });
+    return users;
+}

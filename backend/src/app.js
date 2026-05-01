@@ -11,6 +11,7 @@ import activityLogRoutes from "./modules/admin/activityLog.routes.js";
 import permissionRoutes from "./modules/permissions/permission.routes.js";
 import roleRoutes from "./modules/roles/role.routes.js";
 import userRoutes from "./modules/users/user.routes.js";
+import notificationRoutes from "./modules/notifications/notification.routes.js";
 
 const app = express();
 
@@ -30,5 +31,6 @@ app.use("/api/activity-logs", activityLogRoutes);
 app.use("/api/permissions", permissionRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 export default app;

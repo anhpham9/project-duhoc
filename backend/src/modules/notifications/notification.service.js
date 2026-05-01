@@ -1,5 +1,6 @@
 import Notification from "./notification.model.js";
 import { createNotification } from "./notification.repository.js";
+import * as userRepo from "../users/user.repository.js";
 
 /**
  * Gửi notification tới user hoặc role
@@ -17,4 +18,34 @@ import { createNotification } from "./notification.repository.js";
 export async function sendNotification({ user_id = null, role_id = null, type, action = null, title, message = null, entity_type = null, entity_id = null, data = null }) {
     if (!user_id && !role_id) throw new Error("Phải có user_id hoặc role_id");
     await createNotification({ user_id, role_id, type, action, title, message, entity_type, entity_id, data });
+}
+
+// Gửi notification cho tất cả user thuộc các role chỉ định
+export async function sendNotificationToRoles({ roles, ...notification }) {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) throw new Error("ROLES_REQUIRED");
+    // Lấy danh sách user thuộc các role
+    const users = await userRepo.getUsersByRoles(roles); // bạn cần có hàm này trong user.repository.js
+    const userIds = users.map(u => u.id);
+    // Gửi notification cho từng user
+    for (const user_id of userIds) {
+        await sendNotification({ ...notification, user_id });
+    }
+}
+
+// Lấy danh sách thông báo của user hiện tại (mới nhất trước)
+export async function getUserNotifications(user_id, { limit = 50, offset = 0 } = {}) {
+    return Notification.findAll({
+        where: { user_id },
+        order: [["created_at", "DESC"]],
+        limit,
+        offset
+    });
+}
+
+// Đánh dấu đã đọc thông báo
+export async function markAsRead(user_id, notification_id) {
+    const noti = await Notification.findOne({ where: { id: notification_id, user_id } });
+    if (!noti) throw new Error("NOTIFICATION_NOT_FOUND");
+    noti.is_read = true;
+    await noti.save();
 }

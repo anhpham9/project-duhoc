@@ -1,9 +1,10 @@
 import bcrypt from "bcrypt";
 import express from "express";
 import * as userRepo from "./user.repository.js";
-import { validateProfile, trimStringFields } from "./user.validation.js";
+import { validateProfile, trimStringFields, validatePassword } from "./user.validation.js";
 import { logActivity } from "../../utils/activityLogger.js";
 import { findLogsByUser } from "./activityLog.repository.js";
+import { hashPassword } from "../../utils/hash.js";
 
 // Lấy thông tin profile user hiện tại
 export const getProfile = async (req, res) => {
@@ -67,7 +68,7 @@ export const updateProfile = async (req, res) => {
 
     let user = await userRepo.getUserById(req.user.id);
     const { password, ...userSafe } = user.dataValues || user;
-    
+
     // Ghi vào activity_logs
     await logActivity({
         user_id: req.user.id,
@@ -106,10 +107,10 @@ export const changeProfilePassword = async (req, res) => {
         return res.status(400).json({ errors: { currentPassword: 'WRONG_PASSWORD' } });
     }
     // Hash mật khẩu mới
-    const salt = await bcrypt.genSalt(10);
-    const hash = await bcrypt.hash(password, salt);
+    const hash = await hashPassword(password);
+
     await userRepo.updateUser(req.user.id, { password: hash });
-    
+
     // Ghi vào activity_logs
     await logActivity({
         user_id: req.user.id,

@@ -779,3 +779,27 @@ ALTER TABLE users
 ADD CONSTRAINT users_fb_unique UNIQUE (fb);
 ```
 
+## Modules logics
+
+- Controller (ví dụ: notification.controller.js hoặc notification.routes.js):
+
+Chỉ xử lý HTTP request/response (nhận req, trả về res).
+Nhận dữ liệu từ client, gọi service để thực hiện nghiệp vụ, trả kết quả về client.
+Không chứa logic nghiệp vụ phức tạp, không thao tác DB trực tiếp.
+
+- Service (ví dụ: notification.service.js):
+
+Chứa logic nghiệp vụ (business logic) của ứng dụng.
+Xử lý các quy trình, phối hợp nhiều thao tác, validate, gọi repository để thao tác DB.
+Không liên quan đến HTTP request/response.
+Có thể tái sử dụng ở nhiều controller hoặc các service khác.
+
+- Repository
+
+Chỉ chứa các hàm thao tác trực tiếp với database/model Notification (CRUD, query, bulk insert, update, delete...).
+Ví dụ: createNotification, findNotificationsByUser, markNotificationAsRead, bulkCreateNotifications...
+
+* Routes = gọi controller
+* Controller = giao tiếp với client (HTTP), gọi service.
+* Service = xử lý nghiệp vụ, gọi repository.
+* Repository = thao tác DB thuần, gọi model.

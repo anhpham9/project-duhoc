@@ -1,8 +1,9 @@
 import crypto from "crypto";
 import * as userRepo from "./user.repository.js";
-import { sendNotification } from "../notifications/notification.service.js";
+import { sendNotification, sendNotificationToRoles } from "../notifications/notification.service.js";
 import { logAudit } from "../../utils/auditLogger.js";
 import { validateUser, validateUpdateUser, trimStringFields } from "./user.validation.js";
+import { hashPassword } from "../../utils/hash.js";
 
 // RBAC helpers (dùng chung cho nhiều API)
 export const rolePriority = role => {
@@ -159,6 +160,11 @@ export const createUser = async (req, res) => {
         return res.status(400).json({ errors: { role_ids: "ROLE_REQUIRED" } });
     }
 
+    // password
+    if (data.password !== data.passwordRepeat || !data.passwordRepeat) {
+        return res.status(400).json({ errors: { passwordRepeat: "PASSWORD_REPEAT_MISMATCH" } });
+    }
+
     // RBAC: kiểm tra quyền tạo user với role nào
     const currentUser = await userRepo.getUserWithRolesAndPermissions(req.user.id);
     const myRole = getHighestRole(currentUser);
@@ -175,6 +181,9 @@ export const createUser = async (req, res) => {
             return res.status(403).json({ error: "FORBIDDEN_ROLE_LEVEL" });
         }
     }
+
+    // Hash password
+    data.password = await hashPassword(data.password);
 
     // Tạo user và gán role, rollback nếu lỗi
     let user;
@@ -193,6 +202,7 @@ export const createUser = async (req, res) => {
     // Gửi notification cho user mới
     await sendNotification({
         user_id: user.id,
+        // role_id: data.role_ids[0], // có thể gửi notification theo role nếu muốn
         type: "user",
         action: "created",
         title: "USER_CREATED",
@@ -311,6 +321,7 @@ export const updateUser = async (req, res) => {
     // Gửi notification cho user
     await sendNotification({
         user_id: user.id,
+        // role_id: data.role_ids[0], // có thể gửi notification theo role nếu muốn
         type: "user",
         action: "updated",
         title: "USER_UPDATED",
@@ -338,9 +349,9 @@ export const deleteUser = async (req, res) => {
     // Xóa tất cả user_roles liên kết trước khi xóa user
     await userRepo.deleteUserRolesByUserId(id);
     await userRepo.deleteUserById(id);
-    // Gửi notification cho quản trị viên
-    await sendNotification({
-        user_id: oldUser.id,
+    // Gửi notification cho tất cả user có role superadmin và admin
+    await sendNotificationToRoles({
+        roles: ["superadmin", "admin"],
         type: "user",
         action: "deleted",
         title: "USER_DELETED",
@@ -382,7 +393,8 @@ export const resetUserPassword = async (req, res) => {
         }
     }
     const newPassword = generateRandomPassword(12);
-    await userRepo.updateUser(userId, { password: newPassword });
+    const hashedPassword = await hashPassword(newPassword);
+    await userRepo.updateUser(userId, { password: hashedPassword });
     // Gửi notification cho user
     await sendNotification({
         user_id: targetUser.id,

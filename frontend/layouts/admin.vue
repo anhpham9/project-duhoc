@@ -82,8 +82,8 @@ watch(() => route.path, checkAuth)
     flex: 1;
     padding: 20px;
     background: #f9f9f9;
-    min-height: calc(100vh - 60px);
-    overflow-x: auto;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
     position: relative;
 }
 
@@ -275,12 +275,12 @@ watch(() => route.path, checkAuth)
 @media (max-width: 768px) {
     .admin-main {
         flex-direction: column;
-        min-height: calc(100vh - 50px);
+        max-height: calc(100vh - 50px);
     }
 
     .admin-content {
         padding: 10px;
-        min-height: calc(100vh - 50px);
+        max-height: calc(100vh - 50px);
     }
 }
 </style>
