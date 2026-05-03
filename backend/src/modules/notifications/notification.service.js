@@ -64,3 +64,17 @@ export async function markAsRead(user_id, notification_id) {
     noti.is_read = true;
     await noti.save();
 }
+
+// Lấy số lượng thông báo chưa đọc của user
+export async function getUnreadCount(user_id) {
+    return Notification.count({ where: { user_id, is_read: false } });
+}
+
+// Lấy danh sách N thông báo chưa đọc mới nhất cho user
+export async function getUnreadList(user_id, limit = 5) {
+    return Notification.findAll({
+        where: { user_id, is_read: false },
+        order: [["created_at", "DESC"]],
+        limit
+    })
+}

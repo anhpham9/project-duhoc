@@ -292,4 +292,13 @@ watch(() => route.path, checkAuth)
         max-height: calc(100vh - 50px);
     }
 }
+
+@media (max-width: 480px) {
+    .modal-content {
+        width: 90%;
+        min-width: unset;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+}
 </style>

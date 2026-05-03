@@ -282,57 +282,46 @@ definePageMeta({
 /* Type styles */
 .unread .notification-icon.type-system {
     background: #dc2626;
-    ;
 }
 
 .unread .notification-icon.type-page {
     background: #3b82f6;
-    ;
 }
 
 .unread .notification-icon.type-contact {
     background: #8b5cf6;
-    ;
 }
 
 .unread .notification-icon.type-news {
     background: #2563eb;
-    ;
 }
 
 .unread .notification-icon.type-schools {
     background: #14b8a6;
-    ;
 }
 
 .unread .notification-icon.type-user {
     background: #6366f1;
-    ;
 }
 
 .unread .notification-icon.type-role {
     background: #f87171;
-    ;
 }
 
 .unread .notification-icon.type-file {
     background: #f59e0b;
-    ;
 }
 
 .unread .notification-icon.type-warning {
     background: #facc15;
-    ;
 }
 
 .unread .notification-icon.type-success {
     background: #22c55e;
-    ;
 }
 
 .unread .notification-icon.type-error {
     background: #ef4444;
-    ;
 }
 
 /* Modal styles */

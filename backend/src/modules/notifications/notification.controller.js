@@ -27,3 +27,23 @@ export async function markAsReadController(req, res) {
         res.status(500).json({ message: "MARK_AS_READ_FAILED" });
     }
 }
+
+// Đếm số thông báo chưa đọc
+export async function getUnreadCountController(req, res) {
+    try {
+        const count = await notificationService.getUnreadCount(req.user.id)
+        res.json({ count })
+    } catch (err) {
+        res.status(500).json({ message: "GET_UNREAD_COUNT_FAILED" })
+    }
+}
+
+// Lấy 5 thông báo chưa đọc mới nhất
+export async function getUnreadListController(req, res) {
+    try {
+        const notifications = await notificationService.getUnreadList(req.user.id, 5)
+        res.json({ notifications })
+    } catch (err) {
+        res.status(500).json({ message: "GET_UNREAD_LIST_FAILED" })
+    }
+}
