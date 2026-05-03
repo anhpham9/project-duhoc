@@ -272,6 +272,15 @@ watch(() => route.path, checkAuth)
     color: #b71c1c;
 }
 
+
+/* Actions */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 50px;
+    margin-top: 10px;
+}
+
 @media (max-width: 768px) {
     .admin-main {
         flex-direction: column;

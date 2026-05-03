@@ -33,13 +33,28 @@ export async function sendNotificationToRoles({ roles, ...notification }) {
 }
 
 // Lấy danh sách thông báo của user hiện tại (mới nhất trước)
-export async function getUserNotifications(user_id, { limit = 50, offset = 0 } = {}) {
+export async function getUserNotifications(user_id, { limit = 50, offset = 0, unread } = {}) {
+    const where = { user_id };
+    if (unread === 'true') where.is_read = false;
     return Notification.findAll({
-        where: { user_id },
+        where,
         order: [["created_at", "DESC"]],
         limit,
         offset
     });
+}
+
+// Lấy danh sách thông báo của user hiện tại (có phân trang và tổng số lượng)
+export async function getUserNotificationsWithCount(user_id, { limit = 10, offset = 0, unread } = {}) {
+    const where = { user_id };
+    if (unread === 'true') where.is_read = false;
+    const { rows: notifications, count: total } = await Notification.findAndCountAll({
+        where,
+        order: [["created_at", "DESC"]],
+        limit,
+        offset
+    });
+    return { notifications, total };
 }
 
 // Đánh dấu đã đọc thông báo

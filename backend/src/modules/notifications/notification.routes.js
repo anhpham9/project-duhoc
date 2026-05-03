@@ -4,10 +4,10 @@ import { getUserNotificationsController, markAsReadController } from "./notifica
 
 const router = express.Router();
 
-// Lấy danh sách thông báo của user hiện tại
+// Lấy danh sách thông báo của user hiện tại, hỗ trợ lọc unread
 router.get("/", authMiddleware, getUserNotificationsController);
 
 // Đánh dấu đã đọc
-router.put(":id/read", authMiddleware, markAsReadController);
+router.put("/:id/read", authMiddleware, markAsReadController);
 
 export default router;

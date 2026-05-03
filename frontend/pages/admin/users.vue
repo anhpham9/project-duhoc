@@ -895,14 +895,6 @@ definePageMeta({
     color: #7b1fa2;
 }
 
-/* Actions */
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 50px;
-    margin-top: 10px;
-}
-
 .search-input {
     margin-left: 1em;
     padding: 0.3em 0.7em;
