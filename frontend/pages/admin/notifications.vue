@@ -99,6 +99,7 @@ import { ref, onMounted } from 'vue'
 import BaseToast from '~/components/admin/base/BaseToast.vue'
 import BasePagination from '~/components/admin/base/BasePagination.vue'
 import { formatDate, formatSmartDate } from '~/utils/date'
+import fetchWithRefresh from '~/utils/fetchWithRefresh'
 
 const notifications = ref([])
 const loading = ref(false)
@@ -116,7 +117,7 @@ async function fetchNotifications() {
     try {
         let url = `/api/notifications?limit=${pageSize.value}&page=${page.value}`
         if (filter.value === 'unread') url += '&unread=true'
-        const res = await $fetch(url, { credentials: 'include' })
+        const res = await fetchWithRefresh(url)
         notifications.value = res.notifications || []
         total.value = res.total || 0
         totalPages.value = res.totalPages || 1
@@ -129,8 +130,7 @@ async function fetchNotifications() {
 
 async function markAsRead(id) {
     try {
-        console.log('Marking as read', id)
-        await $fetch(`/api/notifications/${id}/read`, { method: 'PUT', credentials: 'include' })
+        await fetchWithRefresh(`/api/notifications/${id}/read`, { method: 'PUT' })
         const n = notifications.value.find(n => n.id === id)
         if (n) n.is_read = true
         toastRef.value?.open('Đã đánh dấu đã đọc', 'success')

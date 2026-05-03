@@ -410,6 +410,7 @@ import BasePagination from '~/components/admin/base/BasePagination.vue'
 import BaseSearchFilter from '~/components/admin/base/BaseSearchFilter.vue'
 import { formatDate } from '~/utils/date'
 import { exportExcel } from '~/utils/exportExcel'
+import fetchWithRefresh from '~/utils/fetchWithRefresh'
 
 // --- State ---
 const currentUser = useCookie('currentUser')
@@ -543,8 +544,7 @@ async function fetchUsers() {
     }
     if (params.page === 1) delete params.page
     const query = new URLSearchParams(params).toString()
-    const res = await $fetch(`/api/users${query ? '?' + query : ''}`, {
-        credentials: 'include',
+    const res = await fetchWithRefresh(`/api/users${query ? '?' + query : ''}`, {
         headers: { 'Cache-Control': 'no-cache' }
     })
     // Map priority cho từng role trong user.Roles (nếu cần)
@@ -559,7 +559,7 @@ async function fetchUsers() {
     total.value = res.total;
 }
 async function fetchRoles() {
-    const res = await $fetch('/api/roles', { credentials: 'include' })
+    const res = await fetchWithRefresh('/api/roles')
 
     roles.value = res.roles.map(r => ({
         ...r,
@@ -593,8 +593,7 @@ async function exportUsersExcel() {
         delete params.sort_dir
     }
     const query = new URLSearchParams(params).toString()
-    const res = await $fetch(`/api/users/exportToExcel${query ? '?' + query : ''}`, {
-        credentials: 'include',
+    const res = await fetchWithRefresh(`/api/users/exportToExcel${query ? '?' + query : ''}`, {
         headers: { 'Cache-Control': 'no-cache' }
     })
 
@@ -687,10 +686,10 @@ async function saveUser() {
     console.log('Payload gửi lên server:', payload);
     try {
         if (editingUser.value) {
-            await $fetch(`/api/users/${editingUser.value.id}`, { method: 'PUT', body: payload, credentials: 'include' })
+            await fetchWithRefresh(`/api/users/${editingUser.value.id}`, { method: 'PUT', body: payload })
             toastRef.value?.open('Cập nhật người dùng thành công!', 'success')
         } else {
-            await $fetch('/api/users', { method: 'POST', body: payload, credentials: 'include' })
+            await fetchWithRefresh('/api/users', { method: 'POST', body: payload })
             toastRef.value?.open('Thêm người dùng thành công!', 'success')
         }
         closeModal()
@@ -717,7 +716,7 @@ async function resetPassword() {
     if (!resetUser.value) return
     resetLoading.value = true
     try {
-        const res = await $fetch(`/api/users/${resetUser.value.id}/reset-password`, { method: 'POST', credentials: 'include' })
+        const res = await fetchWithRefresh(`/api/users/${resetUser.value.id}/reset-password`, { method: 'POST' })
         resetResult.value = res.newPassword
         toastRef.value?.open('Đặt lại mật khẩu thành công!', 'success')
         fetchUsers()
@@ -736,7 +735,7 @@ function copyPassword() {
 
 async function deleteUser(id) {
     if (confirm('Xóa user này?')) {
-        await $fetch(`/api/users/${id}`, { method: 'DELETE', credentials: 'include' })
+        await fetchWithRefresh(`/api/users/${id}`, { method: 'DELETE' })
         fetchUsers()
     }
 }

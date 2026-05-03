@@ -185,6 +185,7 @@ import { ref, onMounted, computed } from 'vue'
 import BaseToast from '~/components/admin/base/BaseToast.vue'
 import { formatDate } from '~/utils/date'
 import { validateProfile, validatePassword } from '~/utils/fieldValidation.js'
+import fetchWithRefresh from '~/utils/fetchWithRefresh'
 
 const form = ref({
     name: '',
@@ -227,7 +228,7 @@ const passwordRules = computed(() => {
 
 
 async function fetchProfile() {
-    const res = await $fetch('/api/users/profile', { credentials: 'include' })
+    const res = await fetchWithRefresh('/api/users/profile')
     form.value = res.user
 }
 
@@ -251,10 +252,9 @@ async function updateProfile() {
             return;
         }
 
-        const res = await $fetch('/api/users/profile', {
+        const res = await fetchWithRefresh('/api/users/profile', {
             method: 'PUT',
-            body: payload,
-            credentials: 'include'
+            body: payload
         });
         form.value = res.user;
         // Hiển thị thông báo thành công nếu muốn
@@ -298,14 +298,13 @@ async function changePassword() {
         return;
     }
     try {
-        await $fetch('/api/users/profile/password', {
+        await fetchWithRefresh('/api/users/profile/password', {
             method: 'PUT',
             body: {
                 currentPassword: changePasswordForm.value.currentPassword,
                 password: changePasswordForm.value.password,
                 passwordRepeat: changePasswordForm.value.passwordRepeat
-            },
-            credentials: 'include'
+            }
         });
         toastRef.value?.open('Đổi mật khẩu thành công!', 'success', 3000);
         changePasswordForm.value.currentPassword = '';
@@ -329,7 +328,7 @@ function cancelChangePassword() {
 async function fetchActivityLogs() {
     activityLoading.value = true;
     try {
-        const res = await $fetch('/api/users/profile/activity-logs', { credentials: 'include' });
+        const res = await fetchWithRefresh('/api/users/profile/activity-logs');
         activityLogs.value = res.logs || [];
     } catch (e) {
         activityLogs.value = [];

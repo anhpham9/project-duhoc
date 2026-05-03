@@ -40,15 +40,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useCookie } from '#imports'
-import { formatSmartDate, formatDate } from '~/utils/date'
+import { formatSmartDate } from '~/utils/date'
 
 const currentUser = useCookie('currentUser', { default: () => null })
 const user = computed(() => currentUser.value)
-const lastLoginText = computed(() => {
-    if (!user.value?.last_login) return 'Chưa có';
-    const d = new Date(user.value.last_login);
-    return d.toLocaleString();
-})
 
 // Redirect nếu chưa đăng nhập
 onMounted(() => {
